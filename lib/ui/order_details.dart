@@ -168,6 +168,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
       final stocks = _asMapList(response)
           .where((r) => _orderNumber(r['quantity']) > 0)
           .toList();
+      setState(() => loadingStock = false);
       final stock = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (_) => _WarehouseSearch(

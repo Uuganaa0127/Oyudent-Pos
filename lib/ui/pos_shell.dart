@@ -1367,7 +1367,9 @@ class _PosShellState extends State<PosShell> {
                     constraints: BoxConstraints(
                       maxHeight: MediaQuery.sizeOf(context).height * .48,
                     ),
-                    child: SingleChildScrollView(child: _orderTotals()),
+                    child: SingleChildScrollView(
+                      child: Material(color: panelColor, child: _orderTotals()),
+                    ),
                   ),
                 ],
               ),
