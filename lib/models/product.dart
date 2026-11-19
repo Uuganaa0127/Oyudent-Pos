@@ -224,3 +224,15 @@ String _formatInvoiceDate(DateTime date) {
   String two(int value) => value.toString().padLeft(2, '0');
   return '${date.year}-${two(date.month)}-${two(date.day)} ${two(date.hour)}:${two(date.minute)}';
 }
+
+String _stockLineKey(Map<String, dynamic> stock) => jsonEncode([
+  for (final field in [
+    'product_id',
+    'variant_id',
+    'warehouse_id',
+    'in_invoice_id',
+  ])
+    stock[field]?.toString(),
+  if (stock['in_invoice_id'] == null)
+    (stock['lot_number'] ?? stock['lot_no'] ?? '').toString(),
+]);

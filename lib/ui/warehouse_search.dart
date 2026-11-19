@@ -5,11 +5,13 @@ class _WarehouseSearch extends StatefulWidget {
   final List<Map<String, dynamic>>? cachedStocks, knownProducts;
   final ValueChanged<List<Map<String, dynamic>>>? onLoaded;
   final bool selectable;
+  final bool orderBranchOnly;
   const _WarehouseSearch(
     this.token, {
     this.query = '',
     this.maker = '',
     this.selectable = false,
+    this.orderBranchOnly = false,
     this.cachedStocks,
     this.knownProducts,
     this.onLoaded,
@@ -118,6 +120,10 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
           row['size_name'],
           row['color_name'],
           row['sku'],
+          row['product_code'],
+          row['reference'],
+          row['lot_number'],
+          row['lot_no'],
           row['barcode'],
           brand,
         ].join(' '),
@@ -160,17 +166,18 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                   ),
                 ],
               ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  for (final s in ['Хоёулаа', 'Centech', 'Oyudent'])
-                    ChoiceChip(
-                      label: Text(s),
-                      selected: scope == s,
-                      onSelected: (_) => setState(() => scope = s),
-                    ),
-                ],
-              ),
+              if (!widget.orderBranchOnly)
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final s in ['Хоёулаа', 'Centech', 'Oyudent'])
+                      ChoiceChip(
+                        label: Text(s),
+                        selected: scope == s,
+                        onSelected: (_) => setState(() => scope = s),
+                      ),
+                  ],
+                ),
               TextFormField(
                 initialValue: maker,
                 decoration: const InputDecoration(labelText: 'Үйлдвэрлэгч'),
@@ -183,7 +190,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                 ),
                 onChanged: (s) => setState(() => query = s),
               ),
-              if (widget.selectable)
+              if (widget.selectable && !widget.orderBranchOnly)
                 TextButton.icon(
                   icon: const Icon(Icons.search),
                   label: const Text(
@@ -225,6 +232,8 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                                     r['size_name'],
                                     r['color_name'],
                                     r['barcode'],
+                                    r['lot_number'] ?? r['lot_no'],
+                                    r['expiration_date'],
                                     r['scope'],
                                     r['warehouse_name'],
                                   ]

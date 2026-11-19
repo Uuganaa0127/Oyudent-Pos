@@ -37,6 +37,32 @@ class _PosShellState extends State<PosShell> {
   final searchController = TextEditingController();
   final Map<int, int> cart = {};
   final Map<int, String> lineNotes = {};
+  final Map<int, double> salePrices = {};
+
+  double _salePrice(int index) =>
+      salePrices[index] ?? products[index].price.toDouble();
+
+  void _clearCart() {
+    cart.clear();
+    lineNotes.clear();
+    salePrices.clear();
+  }
+
+  Future<void> _editSalePrice(int index) async {
+    final product = products[index];
+    final price = await showDialog<double>(
+      context: context,
+      builder: (_) =>
+          _SalePriceDialog(product: product, price: _salePrice(index)),
+    );
+    if (price == null ||
+        !mounted ||
+        !cart.containsKey(index) ||
+        !identical(product, products[index]))
+      return;
+    setState(() => salePrices[index] = price);
+  }
+
   final vatAccountController = TextEditingController();
   final noVatAccountController = TextEditingController();
   DateTime invoiceDate = DateTime.now();
@@ -197,8 +223,13 @@ class _PosShellState extends State<PosShell> {
   }
 
   double get total =>
-      cart.entries.fold(0, (sum, e) => sum + products[e.key].price * e.value);
-  double get vat => withVat ? total * .1 : 0;
+      cart.entries.fold(0, (sum, e) => sum + _salePrice(e.key) * e.value);
+  double _lineVat(int index, int quantity) =>
+      double.parse((_salePrice(index) * quantity * .1).toStringAsFixed(2));
+  double _taxFor(bool includeVat) => includeVat
+      ? cart.entries.fold<double>(0, (sum, e) => sum + _lineVat(e.key, e.value))
+      : 0;
+  double get vat => _taxFor(withVat);
   String get currentWarehouse {
     final branch = apiBranches.cast<Map<String, dynamic>?>().firstWhere(
       (b) => b?['id']?.toString() == selectedBranchId,
@@ -382,8 +413,7 @@ class _PosShellState extends State<PosShell> {
     apiCategories.clear();
     apiCatalog.clear();
     apiStockRows.clear();
-    cart.clear();
-    lineNotes.clear();
+    _clearCart();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
       (_) => false,
@@ -399,7 +429,7 @@ class _PosShellState extends State<PosShell> {
     );
     apiStockRows = _asMapList(response['data']);
     _rebuildApiProducts();
-    cart.clear();
+    _clearCart();
   }
 
   void _rebuildApiProducts() {
@@ -427,33 +457,40 @@ class _PosShellState extends State<PosShell> {
 
   Future<void> _refreshProductsWithoutClearingCart() async {
     if (apiToken.isEmpty) return;
-    final previous = <String, int>{};
-    final previousNotes = <String, String>{};
-    for (final entry in cart.entries) {
-      final product = products[entry.key];
-      final key = '${product.reference}|${product.barcode}';
-      previous[key] = entry.value;
-      final note = lineNotes[entry.key];
-      if (note != null) previousNotes[key] = note;
-    }
+    final branch = selectedBranchId;
+    final token = apiToken;
     final results = await Future.wait([
       _apiGet('/product/list?no_paginate=1&sort=-created_at,-id'),
       if (selectedBranchId != null)
         _apiGet('/order/get-available-stocks?branch_id=$selectedBranchId'),
     ]);
+    if (!mounted || selectedBranchId != branch || apiToken != token) return;
+    final previous = <String, int>{};
+    final previousNotes = <String, String>{};
+    final previousPrices = <String, double>{};
+    for (final entry in cart.entries) {
+      final product = products[entry.key];
+      final key = _stockLineKey(product.apiStock ?? {});
+      previous[key] = entry.value;
+      final price = salePrices[entry.key];
+      if (price != null) previousPrices[key] = price;
+      final note = lineNotes[entry.key];
+      if (note != null) previousNotes[key] = note;
+    }
     apiCatalog = _asMapList(results.first);
     if (selectedBranchId != null && results.length > 1) {
       apiStockRows = _asMapList(results[1]['data']);
     }
     _rebuildApiProducts();
-    cart.clear();
-    lineNotes.clear();
+    _clearCart();
     for (var index = 0; index < products.length; index++) {
       final product = products[index];
-      final key = '${product.reference}|${product.barcode}';
+      final key = _stockLineKey(product.apiStock ?? {});
       final quantity = previous[key];
       if (quantity != null) {
         cart[index] = quantity;
+        final price = previousPrices[key];
+        if (price != null) salePrices[index] = price;
         final note = previousNotes[key];
         if (note != null) lineNotes[index] = note;
       }
@@ -550,8 +587,8 @@ class _PosShellState extends State<PosShell> {
       final stock = product.apiStock;
       if (stock == null)
         throw Exception('Захиалга өгөхийн өмнө үлдэгдлийг шинэчилнэ үү.');
-      final netPrice = product.price.toDouble();
-      final lineVat = includeVat ? netPrice * .1 * entry.value : 0.0;
+      final netPrice = _salePrice(entry.key);
+      final lineVat = includeVat ? _lineVat(entry.key, entry.value) : 0.0;
       return {
         'productId': stock['product_id'],
         'variantId': stock['variant_id'],
@@ -565,7 +602,7 @@ class _PosShellState extends State<PosShell> {
         'note': lineNotes[entry.key] ?? '',
       };
     }).toList();
-    final invoiceTax = includeVat ? total * .1 : 0.0;
+    final invoiceTax = _taxFor(includeVat);
     final generatedInvoiceNumber = await _nextOutgoingInvoiceNumber(
       invoiceDate,
     );
@@ -591,8 +628,7 @@ class _PosShellState extends State<PosShell> {
     final decoded = await _api.post('/order/', orderBody);
     decoded['_generatedInvoiceNumber'] = generatedInvoiceNumber;
     setState(() {
-      cart.clear();
-      lineNotes.clear();
+      _clearCart();
       noteController.clear();
     });
     try {
@@ -1313,7 +1349,7 @@ class _PosShellState extends State<PosShell> {
                         ),
                         const SizedBox(width: 9),
                         IconButton(
-                          onPressed: () => setState(cart.clear),
+                          onPressed: () => setState(_clearCart),
                           icon: const Icon(
                             Icons.delete_outline,
                             color: muted,
@@ -1388,9 +1424,13 @@ class _PosShellState extends State<PosShell> {
                 (e) => _CartLine(
                   product: products[e.key],
                   quantity: e.value,
+                  price: _salePrice(e.key),
+                  editPrice: apiBusy ? null : () => _editSalePrice(e.key),
                   onMinus: () => setState(() {
                     if (e.value <= 1) {
                       cart.remove(e.key);
+                      salePrices.remove(e.key);
+                      lineNotes.remove(e.key);
                     } else {
                       cart[e.key] = e.value - 1;
                     }
@@ -1679,11 +1719,11 @@ class _PosShellState extends State<PosShell> {
         'lot': stock['lot_number'] ?? product.lotNumber,
         'expiry': stock['expiration_date'] ?? '',
         'quantity': entry.value,
-        'unitPrice': product.price,
+        'unitPrice': _salePrice(entry.key),
       };
     }).toList();
     final receiptSubtotal = total;
-    final receiptTax = includeVat ? total * .1 : 0.0;
+    final receiptTax = _taxFor(includeVat);
     final receiptTotal = receiptSubtotal + receiptTax;
     final company = apiCompanies.cast<Map<String, dynamic>?>().firstWhere(
       (item) => item?['id']?.toString() == selectedApiCompanyId,
@@ -1749,7 +1789,7 @@ class _PosShellState extends State<PosShell> {
                   adjustments[entry.key] =
                       (adjustments[entry.key] ?? 0) - entry.value;
                 }
-                cart.clear();
+                _clearCart();
               });
             },
             child: const Text('Дуусгах'),
@@ -2044,7 +2084,7 @@ class _PosShellState extends State<PosShell> {
           ...items.asMap().entries.map((entry) {
             final item = entry.value;
             final quantity = _asInt(item['quantity']);
-            final unitPrice = _asInt(item['unitPrice']).toDouble();
+            final unitPrice = _orderNumber(item['unitPrice']);
             return IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

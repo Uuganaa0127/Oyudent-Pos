@@ -105,12 +105,41 @@ class _OrderDetails extends StatefulWidget {
   State<_OrderDetails> createState() => _OrderDetailsState();
 }
 
+class _ReturnLine {
+  _ReturnLine(this.stock, this.quantity, this.price, this.taxShare);
+  factory _ReturnLine.fromOrder(Map<String, dynamic> row, bool vat) {
+    final gross =
+        _orderNumber(row['unit_price']) * _orderNumber(row['quantity']);
+    final share = gross > 0
+        ? _orderNumber(row['tax']) / gross
+        : (vat ? 1 / 11 : 0.0);
+    return _ReturnLine(
+      row,
+      row['quantity'].toString(),
+      row['unit_price'].toString(),
+      share,
+    );
+  }
+  final Map<String, dynamic> stock;
+  String quantity, price;
+  final double taxShare;
+  double? available;
+  int revision = 0;
+  double get gross => _orderNumber(quantity) * _orderNumber(price);
+  double get tax => double.parse((gross * taxShare).toStringAsFixed(2));
+}
+
 class _OrderDetailsState extends State<_OrderDetails> {
   late bool editing = widget.startEditing;
   late final order = widget.order;
-  late final lines = List<Map<String, dynamic>>.from(order['items']);
-  late final quantities = lines.map((l) => l['quantity'].toString()).toList();
-  late final prices = lines.map((l) => l['unit_price'].toString()).toList();
+  late final original = List<Map<String, dynamic>>.from(order['items']);
+  late final vat =
+      _orderNumber(order['tax']) > 0 ||
+      ['true', '1'].contains(order['is_vat'].toString().toLowerCase());
+  late final lines = original
+      .map((r) => _ReturnLine.fromOrder(r, vat))
+      .toList();
+  bool loadingStock = false;
   late String note = order['note']?.toString() ?? '';
   bool saving = false;
   String? error;
@@ -118,17 +147,84 @@ class _OrderDetailsState extends State<_OrderDetails> {
   String get status => order['status_code']?.toString() ?? '';
   double get total {
     var result = _orderNumber(order['total_gross'] ?? order['total']);
-    for (var i = 0; i < lines.length; i++) {
-      result +=
-          _orderNumber(quantities[i]) * _orderNumber(prices[i]) -
-          _orderNumber(lines[i]['quantity']) *
-              _orderNumber(lines[i]['unit_price']);
+    for (final row in original) {
+      result -= _orderNumber(row['quantity']) * _orderNumber(row['unit_price']);
     }
-    return result;
+    return lines.fold(result, (sum, l) => sum + l.gross);
+  }
+
+  Future<void> addProduct() async {
+    final branch = order['branch_id']?.toString() ?? '';
+    if (loadingStock || saving || branch.isEmpty) return;
+    setState(() {
+      loadingStock = true;
+      error = null;
+    });
+    try {
+      final response = await widget.api.get(
+        '/order/get-available-stocks?branch_id=${Uri.encodeQueryComponent(branch)}',
+      );
+      if (!mounted) return;
+      final stocks = _asMapList(response)
+          .where((r) => _orderNumber(r['quantity']) > 0)
+          .toList();
+      final stock = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (_) => _WarehouseSearch(
+          widget.api.token,
+          cachedStocks: stocks,
+          selectable: true,
+          orderBranchOnly: true,
+        ),
+      );
+      if (stock == null || !mounted) return;
+      final key = _stockLineKey(stock);
+      final existing = lines
+          .where((l) => _stockLineKey(l.stock) == key)
+          .firstOrNull;
+      final available = _orderNumber(stock['quantity']);
+      final next = existing == null ? 1.0 : _orderNumber(existing.quantity) + 1;
+      if (next > available)
+        throw Exception('Сонгосон лотын үлдэгдэл хүрэлцэхгүй.');
+      setState(() {
+        if (existing != null) {
+          existing.quantity = next.toString();
+          existing.available = available;
+          existing.revision++;
+        } else {
+          final net = _orderNumber(
+            stock['unit_price'] ?? stock['base_unit_price'] ?? stock['price'],
+          );
+          final gross = vat ? net * 1.1 : net;
+          lines.add(
+            _ReturnLine(
+              {
+                ...stock,
+                'product_name': Product.fromApi(stock).name,
+                'lot_no': stock['lot_no'] ?? stock['lot_number'],
+                'variant_code': stock['barcode'] ?? stock['variant_code'],
+                'discount': 0,
+                'note': '',
+              },
+              '1',
+              gross.toStringAsFixed(2),
+              vat ? 1 / 11 : 0,
+            )..available = available,
+          );
+        }
+      });
+    } catch (e) {
+      if (mounted)
+        setState(() => error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => loadingStock = false);
+    }
   }
 
   Future<void> save() async {
     if (saving ||
+        lines.isEmpty ||
+        loadingStock ||
         status != 'ORDER_STATUS_RETURNED' ||
         !form.currentState!.validate())
       return;
@@ -146,19 +242,15 @@ class _OrderDetailsState extends State<_OrderDetails> {
       }
       final items = <Map<String, dynamic>>[];
       var tax = _orderNumber(order['tax']);
-      for (var i = 0; i < lines.length; i++) {
-        final line = lines[i];
-        final qty = double.parse(quantities[i]);
-        final gross = double.parse(prices[i]);
-        final originalGross =
-            _orderNumber(line['unit_price']) * _orderNumber(line['quantity']);
-        final oldTax = _orderNumber(line['tax']);
-        final newTax = originalGross > 0
-            ? double.parse(
-                (qty * gross * oldTax / originalGross).toStringAsFixed(2),
-              )
-            : oldTax;
-        tax += newTax - oldTax;
+      for (final row in original) {
+        tax -= _orderNumber(row['tax']);
+      }
+      for (final draft in lines) {
+        final line = draft.stock;
+        final qty = double.parse(draft.quantity);
+        final gross = double.parse(draft.price);
+        final newTax = draft.tax;
+        tax += newTax;
         items.add({
           'productId': line['product_id'],
           'variantId': line['variant_id'],
@@ -204,19 +296,30 @@ class _OrderDetailsState extends State<_OrderDetails> {
   Widget numberField(int i, {required bool price}) => SizedBox(
     width: 150,
     child: TextFormField(
-      initialValue: price ? prices[i] : quantities[i],
+      key: ValueKey((lines[i], price, price ? 0 : lines[i].revision)),
+      initialValue: price ? lines[i].price : lines[i].quantity,
       enabled: !saving,
       decoration: InputDecoration(
-        labelText: price ? 'Нэгж үнэ (₮)' : 'Тоо хэмжээ',
+        labelText: price
+            ? (vat ? 'НӨАТ-тай нэгж үнэ (₮)' : 'Нэгж үнэ (₮)')
+            : 'Тоо хэмжээ',
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       validator: (text) {
         final n = double.tryParse(text ?? '');
         if (n == null || !n.isFinite || n < 0 || (!price && n == 0))
           return 'Зөв тоон утга оруулна уу';
+        if (!price && lines[i].available != null && n > lines[i].available!)
+          return 'Үлдэгдэл: ${lines[i].available}';
         return null;
       },
-      onChanged: (v) => setState(() => (price ? prices : quantities)[i] = v),
+      onChanged: (v) => setState(() {
+        if (price) {
+          lines[i].price = v;
+        } else {
+          lines[i].quantity = v;
+        }
+      }),
     ),
   );
 
@@ -245,23 +348,35 @@ class _OrderDetailsState extends State<_OrderDetails> {
               Text(
                 'Баримтын огноо: ${_displayApiDate(order['invoice_date'])}   Төлөх огноо: ${_displayApiDate(order['due_date'])}',
               ),
+              if (editing)
+                OutlinedButton.icon(
+                  onPressed:
+                      saving || loadingStock || order['branch_id'] == null
+                      ? null
+                      : addProduct,
+                  icon: const Icon(Icons.add_shopping_cart),
+                  label: const Text('Бараа нэмэх'),
+                ),
+              if (loadingStock) const LinearProgressIndicator(),
               if (lines.isEmpty) const Text('Захиалгад бараа байхгүй.'),
               for (var i = 0; i < lines.length; i++) ...[
                 const Divider(height: 24),
                 Text(
-                  (lines[i]['product_name'] ?? lines[i]['name'] ?? 'Бараа')
+                  (lines[i].stock['product_name'] ??
+                          lines[i].stock['name'] ??
+                          'Бараа')
                       .toString(),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 Text(
                   [
-                    lines[i]['variant_name'],
-                    lines[i]['variant_code'],
-                    lines[i]['warehouse_name'],
-                    if (lines[i]['lot_no'] != null)
-                      'Лот: ${lines[i]['lot_no']}',
-                    if (lines[i]['expiration_date'] != null)
-                      'Дуусах: ${_displayApiDate(lines[i]['expiration_date'])}',
+                    lines[i].stock['variant_name'],
+                    lines[i].stock['variant_code'],
+                    lines[i].stock['warehouse_name'],
+                    if (lines[i].stock['lot_no'] != null)
+                      'Лот: ${lines[i].stock['lot_no']}',
+                    if (lines[i].stock['expiration_date'] != null)
+                      'Дуусах: ${_displayApiDate(lines[i].stock['expiration_date'])}',
                   ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
                 ),
                 if (editing)
@@ -271,11 +386,18 @@ class _OrderDetailsState extends State<_OrderDetails> {
                     children: [
                       numberField(i, price: false),
                       numberField(i, price: true),
+                      TextButton.icon(
+                        onPressed: saving || loadingStock
+                            ? null
+                            : () => setState(() => lines.removeAt(i)),
+                        icon: const Icon(Icons.remove_circle_outline),
+                        label: const Text('Мөр хасах'),
+                      ),
                     ],
                   )
                 else
                   Text(
-                    '${quantities[i]} × ${_orderMoney(_orderNumber(prices[i]))}',
+                    '${lines[i].quantity} × ${_orderMoney(_orderNumber(lines[i].price))}',
                   ),
               ],
               const Divider(height: 24),
@@ -313,7 +435,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
       ),
       if (status == 'ORDER_STATUS_RETURNED')
         FilledButton(
-          onPressed: saving
+          onPressed: saving || loadingStock || (editing && lines.isEmpty)
               ? null
               : editing
               ? save

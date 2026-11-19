@@ -132,15 +132,80 @@ class _ProductImage extends StatelessWidget {
   );
 }
 
+class _SalePriceDialog extends StatefulWidget {
+  const _SalePriceDialog({required this.product, required this.price});
+  final Product product;
+  final double price;
+  @override
+  State<_SalePriceDialog> createState() => _SalePriceDialogState();
+}
+
+class _SalePriceDialogState extends State<_SalePriceDialog> {
+  final form = GlobalKey<FormState>();
+  late String amount = widget.price.toStringAsFixed(2);
+  void submit() {
+    if (form.currentState!.validate())
+      Navigator.pop(context, double.parse(amount));
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Борлуулах үнэ засах'),
+    content: Form(
+      key: form,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(widget.product.name),
+          const SizedBox(height: 12),
+          TextFormField(
+            initialValue: amount,
+            autofocus: true,
+            selectAllOnFocus: true,
+            decoration: const InputDecoration(
+              labelText: 'НӨАТ-гүй нэгж үнэ (₮)',
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (v) => amount = v.trim(),
+            onFieldSubmitted: (_) => submit(),
+            validator: (_) =>
+                RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(amount) &&
+                    (double.tryParse(amount)?.isFinite ?? false)
+                ? null
+                : 'Үнийг хоёр хүртэл орны нарийвчлалтай оруулна уу.',
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Болих'),
+      ),
+      TextButton(
+        onPressed: () =>
+            Navigator.pop(context, widget.product.price.toDouble()),
+        child: const Text('Үндсэн үнэ'),
+      ),
+      FilledButton(onPressed: submit, child: const Text('Хэрэглэх')),
+    ],
+  );
+}
+
 class _CartLine extends StatelessWidget {
   final Product product;
   final int quantity;
+  final double price;
+  final VoidCallback? editPrice;
   final VoidCallback onMinus, onPlus;
   final String note;
   final ValueChanged<String> onNoteChanged;
   const _CartLine({
     required this.product,
     required this.quantity,
+    required this.price,
+    required this.editPrice,
     required this.onMinus,
     required this.onPlus,
     required this.note,
@@ -180,9 +245,14 @@ class _CartLine extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    '₮${_money(product.price.toDouble())}',
-                    style: const TextStyle(color: muted, fontSize: 10),
+                  TextButton.icon(
+                    onPressed: editPrice,
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                    ),
+                    icon: const Icon(Icons.edit_outlined, size: 14),
+                    label: Text('₮${_money(price)}'),
                   ),
                 ],
               ),

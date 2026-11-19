@@ -85,7 +85,13 @@ class _ExpenseRow extends StatelessWidget {
   );
 }
 
-String _money(double n) => n.round().toString().replaceAllMapped(
-  RegExp(r'\B(?=(\d{3})+(?!\d))'),
-  (_) => ',',
-);
+String _money(double n) {
+  final parts = n.toStringAsFixed(2).split('.');
+  final whole = parts.first.replaceAllMapped(
+    RegExp(r'\B(?=(\d{3})+(?!\d))'),
+    (_) => ',',
+  );
+  return parts.length == 2 && parts.last != '00'
+      ? '$whole.${parts.last}'
+      : whole;
+}
