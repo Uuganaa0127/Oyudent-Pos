@@ -7,13 +7,13 @@ class _ExpenseHeader extends StatelessWidget {
     padding: EdgeInsets.symmetric(horizontal: 18, vertical: 13),
     child: Row(
       children: [
-        Expanded(flex: 4, child: Text('DESCRIPTION', style: _tableHead)),
-        Expanded(flex: 2, child: Text('CATEGORY', style: _tableHead)),
-        Expanded(flex: 2, child: Text('DATE', style: _tableHead)),
-        Expanded(flex: 2, child: Text('PAYMENT', style: _tableHead)),
+        Expanded(flex: 4, child: Text('ТАЙЛБАР', style: _tableHead)),
+        Expanded(flex: 2, child: Text('АНГИЛАЛ', style: _tableHead)),
+        Expanded(flex: 2, child: Text('ОГНОО', style: _tableHead)),
+        Expanded(flex: 2, child: Text('ТӨЛБӨР', style: _tableHead)),
         SizedBox(
           width: 100,
-          child: Text('AMOUNT', textAlign: TextAlign.right, style: _tableHead),
+          child: Text('ДҮН', textAlign: TextAlign.right, style: _tableHead),
         ),
       ],
     ),
@@ -21,6 +21,7 @@ class _ExpenseHeader extends StatelessWidget {
 }
 
 const _tableHead = TextStyle(
+  fontFamily: 'monospace',
   color: muted,
   fontSize: 9,
   letterSpacing: .8,

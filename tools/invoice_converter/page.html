@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="mn">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  />
+  <title>Оюудент · Excel хөрвүүлэгч</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f3f7f7;
+      color: #18313a;
+      font:
+        15px/1.5 system-ui,
+        sans-serif;
+    }
+    main {
+      max-width: 1350px;
+      margin: auto;
+      padding: 32px 4vw;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    header b {
+      background: #086656;
+      color: white;
+      border-radius: 7px;
+      padding: 5px 10px;
+    }
+    h1,
+    h2,
+    p {
+      margin: 0 0 12px;
+    }
+    h1 {
+      font-size: clamp(24px, 4vw, 38px);
+    }
+    h2 {
+      font-size: 19px;
+    }
+    section {
+      background: white;
+      border: 1px solid #cfdbdb;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: inline-flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      color: #35535b;
+    }
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+      color: inherit;
+      padding: 8px;
+      border: 1px solid #a7b9be;
+      border-radius: 6px;
+      background: white;
+    }
+    button {
+      cursor: pointer;
+      color: #075e50;
+      font-weight: 600;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: wait;
+    }
+    .hero {
+      background: #086656;
+      color: white;
+    }
+    .bar {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    textarea {
+      width: 100%;
+      height: 110px;
+    }
+    .scroll {
+      overflow: auto;
+      max-height: 470px;
+    }
+    table {
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th {
+      background: #e4f0ee;
+      position: sticky;
+      top: 0;
+      text-align: left;
+      z-index: 1;
+      padding: 8px;
+    }
+    td {
+      border-bottom: 1px solid #dce5e7;
+      padding: 3px;
+    }
+    td input:not([type="checkbox"]) {
+      width: 150px;
+    }
+    summary {
+      cursor: pointer;
+      color: #065f51;
+    }
+    output {
+      display: block;
+      white-space: pre-wrap;
+    }
+    #error {
+      color: #a32d42;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid #137d83;
+    }
+    [hidden] {
+      display: none !important;
+    }
+  </style>
+  <main>
+    <header><b>OYUDENT</b> Борлуулалт ба агуулах</header>
+    <h1>Нэхэмжлэхийг Excel болгох</h1>
+    <p>
+      Файлыг таны компьютерт уншина. Kimi түлхүүр, интернэт холболт шаардахгүй.
+    </p>
+    <section>
+      <h2>Эх файл</h2>
+      <div class="bar">
+        <label
+          >Excel, CSV, TSV, TXT, ODS, Word (.docx), PDF эсвэл зураг (PNG, JPEG,
+          WebP)<input
+            id="file"
+            type="file"
+            accept=".xlsx,.xls,.xlsm,.ods,.csv,.tsv,.txt,.docx,.pdf,.png,.jpg,.jpeg,.webp"
+        /></label>
+      </div>
+      <output id="status" role="status"></output>
+      <details id="textBox">
+        <summary>Текст оруулах, таньсан текстийг засах</summary>
+        <p>
+          Нэг барааг нэг мөрөнд, багануудыг Tab-аар тусгаарлана. Эхний мөрөнд
+          баганын нэр оруулна уу.
+        </p>
+        <textarea
+          id="paste"
+          placeholder="Барааны нэр&#9;Тоо хэмжээ&#9;Нэгж үнэ"
+        ></textarea
+        ><button id="useText">Текстээс хүснэгт үүсгэх</button>
+      </details>
+    </section>
+    <section>
+      <h2>Зориулалт ба баганын тохиргоо</h2>
+      <div class="bar">
+        <label
+          >Excel загвар<select id="mode">
+            <option value="pi">Орлого · Нийлүүлэгчийн нэхэмжлэх</option>
+            <option value="product">Бараа · Бараа ба хувилбарууд</option>
+          </select></label
+        ><label>Эх хуудас<select id="sheet"></select></label
+        ><label
+          >Гарчгийн мөр<input
+            type="number"
+            min="1"
+            value="1"
+            id="head" /></label
+        ><button id="mapBtn">Багана тохируулах</button>
+      </div>
+      <div id="mapping" class="bar"></div>
+      <button id="apply">Эх файлаас мөрүүдийг авах</button>
+    </section>
+    <section>
+      <h2>Шалгах ба хадгалах</h2>
+      <p>
+        Тэмдэглэсэн мөрүүд Excel-д орно. Нийт дүн, тээвэр зэрэг бараа биш мөрийн
+        чагтыг авна уу.
+      </p>
+      <div class="bar" id="meta">
+        <label
+          >Валют (USD, JPY, CNY, MNT…)<input
+            id="currency"
+            maxlength="3"
+            placeholder="USD" /></label
+        ><label>Нэхэмжлэх №<input id="invoice" /></label
+        ><label>Нэхэмжлэхийн огноо<input id="date" type="date" /></label
+        ><label>Нийлүүлэгч<input id="supplier" /></label>
+      </div>
+      <div class="scroll">
+        <table>
+          <thead id="headers"></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="bar">
+        <button id="prev" hidden>Өмнөх</button><span id="range"></span
+        ><button id="next" hidden>Дараах</button>
+      </div>
+      <div class="bar">
+        <button id="add">Мөр нэмэх</button
+        ><button class="hero" id="download">Шалгаж Excel хадгалах</button>
+      </div>
+      <output id="error" role="alert"></output>
+    </section>
+  </main>
+</html>

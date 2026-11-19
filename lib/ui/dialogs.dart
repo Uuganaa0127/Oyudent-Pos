@@ -42,8 +42,7 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
     final token = tokenController.text.trim();
     if (token.isEmpty) {
       setState(() {
-        result =
-            'Enter an API access token to sign in to the product import API.';
+        result = 'Бараа импортлохын тулд API хандалтын токеноо оруулна уу.';
         succeeded = false;
       });
       return;
@@ -82,14 +81,14 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
       setState(() {
         succeeded = response.statusCode >= 200 && response.statusCode < 300;
         result = succeeded!
-            ? 'Import completed. ${body.isEmpty ? '' : body}'
-            : 'Import failed (${response.statusCode}). ${body.isEmpty ? 'Check your token, files, and API access.' : body}';
+            ? 'Импорт дууслаа. ${body.isEmpty ? '' : body}'
+            : 'Импорт амжилтгүй (${response.statusCode}). ${body.isEmpty ? 'Токен, файл болон хандалтын эрхээ шалгана уу.' : body}';
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         succeeded = false;
-        result = 'Could not reach the Oyudent API: $error';
+        result = 'Оюудентийн системтэй холбогдож чадсангүй: $error';
       });
     } finally {
       if (mounted) setState(() => importing = false);
@@ -98,7 +97,7 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Import products'),
+    title: const Text('Бараа импортлох'),
     content: SizedBox(
       width: 480,
       child: SingleChildScrollView(
@@ -106,18 +105,20 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Import products from the Oyudent bulk product files.'),
+            const Text('Оюудентийн загвар файлаас бараа оруулна.'),
             const SizedBox(height: 6),
             const Text(
-              'The workbook includes Products and Variants sheets; the ZIP can provide product and variant images.',
+              'Excel файл Products болон Variants хуудастай байна. Бараа, хувилбарын зургийг ZIP файлаар хавсаргаж болно.',
               style: TextStyle(color: muted, fontSize: 11, height: 1.4),
             ),
             const SizedBox(height: 20),
-            const _FieldLabel('1) Excel workbook (.xlsx)'),
+            _SaveConverterButton(enabled: !importing),
+            const SizedBox(height: 12),
+            const _FieldLabel('1. Excel файл (.xlsx)'),
             const SizedBox(height: 7),
             _FilePickerRow(
-              buttonText: 'Choose Excel',
-              filename: workbook?.name ?? 'No workbook selected',
+              buttonText: 'Excel файл сонгох',
+              filename: workbook?.name ?? 'Excel файл сонгоогүй',
               onPressed: importing
                   ? null
                   : () async {
@@ -128,7 +129,7 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Update existing products',
+                'Бүртгэлтэй барааг шинэчлэх',
                 style: TextStyle(fontSize: 12),
               ),
               subtitle: const Text(
@@ -143,11 +144,11 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Preview only (dry run)',
+                'Урьдчилан шалгах',
                 style: TextStyle(fontSize: 12),
               ),
               subtitle: const Text(
-                'Do not change products in the account',
+                'Барааны бүртгэлд өөрчлөлт оруулахгүй',
                 style: TextStyle(color: muted, fontSize: 10),
               ),
               value: dryRun,
@@ -156,11 +157,11 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
                   : (value) => setState(() => dryRun = value),
             ),
             const SizedBox(height: 16),
-            const _FieldLabel('2) Product images (.zip, optional)'),
+            const _FieldLabel('2. Барааны зураг (.zip, заавал биш)'),
             const SizedBox(height: 7),
             _FilePickerRow(
-              buttonText: 'Choose ZIP',
-              filename: images?.name ?? 'No image archive selected',
+              buttonText: 'ZIP файл сонгох',
+              filename: images?.name ?? 'Зургийн файл сонгоогүй',
               onPressed: importing
                   ? null
                   : () async {
@@ -169,19 +170,19 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
                     },
             ),
             const SizedBox(height: 16),
-            const _FieldLabel('Oyudent API access token'),
+            const _FieldLabel('Оюудентийн API хандалтын токен'),
             const SizedBox(height: 7),
             TextField(
               controller: tokenController,
               obscureText: true,
               decoration: const InputDecoration(
-                hintText: 'Paste your bearer token',
+                hintText: 'Хандалтын токеноо оруулна уу',
                 prefixIcon: Icon(Icons.lock_outline, size: 18),
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Your token is used for this request only and is not saved.',
+              'Токеныг зөвхөн энэ хүсэлтэд ашиглана.',
               style: TextStyle(color: muted, fontSize: 11),
             ),
             if (result != null) ...[
@@ -190,17 +191,13 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(11),
                 decoration: BoxDecoration(
-                  color: succeeded == true
-                      ? const Color(0xFFE8F5EC)
-                      : const Color(0xFFFFF1F0),
+                  color: succeeded == true ? activeSurface : errorSurface,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   result!,
                   style: TextStyle(
-                    color: succeeded == true
-                        ? const Color(0xFF176B4B)
-                        : const Color(0xFF9E3128),
+                    color: succeeded == true ? green : errorInk,
                     fontSize: 12,
                   ),
                 ),
@@ -213,7 +210,7 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
     actions: [
       TextButton(
         onPressed: importing ? null : () => Navigator.pop(context),
-        child: const Text('Close'),
+        child: const Text('Хаах'),
       ),
       FilledButton.icon(
         onPressed: importing || workbook == null ? null : _import,
@@ -224,7 +221,7 @@ class _ProductBulkImportDialogState extends State<_ProductBulkImportDialog> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.cloud_upload_outlined, size: 17),
-        label: Text(importing ? 'Importing…' : 'Start import'),
+        label: Text(importing ? 'Импортолж байна…' : 'Импортлох'),
         style: FilledButton.styleFrom(backgroundColor: green),
       ),
     ],
@@ -265,38 +262,38 @@ class _NewExpenseDialog extends StatefulWidget {
 }
 
 class _NewExpenseDialogState extends State<_NewExpenseDialog> {
-  String category = 'Supplies';
+  String category = 'Хангамж';
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Add expense'),
+    title: const Text('Зардал бүртгэх'),
     content: SizedBox(
       width: 350,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _FieldLabel('Description'),
+          const _FieldLabel('Тайлбар'),
           const SizedBox(height: 6),
           const TextField(
-            decoration: InputDecoration(hintText: 'e.g. Coffee beans'),
+            decoration: InputDecoration(hintText: 'Жишээ нь: кофены үр'),
           ),
           const SizedBox(height: 14),
-          const _FieldLabel('Amount (₮)'),
+          const _FieldLabel('Дүн (₮)'),
           const SizedBox(height: 6),
           const TextField(
             keyboardType: TextInputType.number,
             decoration: InputDecoration(hintText: '0'),
           ),
           const SizedBox(height: 14),
-          const _FieldLabel('Category'),
+          const _FieldLabel('Ангилал'),
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
             initialValue: category,
             items: [
-              'Supplies',
-              'Rent',
-              'Utilities',
-              'Other',
+              'Хангамж',
+              'Түрээс',
+              'Ашиглалтын зардал',
+              'Бусад',
             ].map((x) => DropdownMenuItem(value: x, child: Text(x))).toList(),
             onChanged: (v) => setState(() => category = v ?? category),
           ),
@@ -306,12 +303,12 @@ class _NewExpenseDialogState extends State<_NewExpenseDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: const Text('Болих'),
       ),
       FilledButton(
         onPressed: () => Navigator.pop(context),
         style: FilledButton.styleFrom(backgroundColor: green),
-        child: const Text('Save expense'),
+        child: const Text('Зардал хадгалах'),
       ),
     ],
   );

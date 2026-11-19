@@ -11,13 +11,13 @@ class ZarlagaInvoicePage extends StatefulWidget {
 class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
   OyudentApi get api => OyudentApi(widget.apiToken);
   static const labels = <String, String>{
-    'ORDER_STATUS_PENDING': 'Pending',
-    'ORDER_STATUS_PROCESSING': 'Preparing',
-    'ORDER_STATUS_SHIPPING': 'Out for delivery',
-    'ORDER_STATUS_DELIVERED': 'Delivered',
-    'ORDER_STATUS_CANCELLED': 'Cancelled',
-    'ORDER_STATUS_RETURNED': 'Returned',
-    'ORDER_STATUS_FAILED_DELIVERY': 'Delivery failed',
+    'ORDER_STATUS_PENDING': 'Хүлээгдэж буй',
+    'ORDER_STATUS_PROCESSING': 'Бэлтгэж байна',
+    'ORDER_STATUS_SHIPPING': 'Хүргэлтэд гарсан',
+    'ORDER_STATUS_DELIVERED': 'Хүргэгдсэн',
+    'ORDER_STATUS_CANCELLED': 'Цуцлагдсан',
+    'ORDER_STATUS_RETURNED': 'Буцаагдсан',
+    'ORDER_STATUS_FAILED_DELIVERY': 'Хүргэлт амжилтгүй',
   };
   static const transitions = <String, List<String>>{
     'ORDER_STATUS_PENDING': [
@@ -114,13 +114,14 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
           startEditing: edit && data['status_code'] == 'ORDER_STATUS_RETURNED',
         ),
       );
-      if (saved == true && mounted) _notice(context, 'Order changes saved.');
+      if (saved == true && mounted)
+        _notice(context, 'Захиалгын өөрчлөлтийг хадгаллаа.');
       if (mounted &&
           (saved == true || data['status_code'] != order['status_code']))
         await _loadOrders();
     } catch (exception) {
       if (mounted)
-        _notice(context, 'Could not open order: $exception', failed: true);
+        _notice(context, 'Захиалгыг нээж чадсангүй: $exception', failed: true);
     } finally {
       if (mounted) setState(() => busyOrderIds.remove(id));
     }
@@ -138,13 +139,13 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
         'id': id,
         'statusCode': statusCode,
       });
-      if (mounted) _notice(context, 'Delivery status updated.');
+      if (mounted) _notice(context, 'Хүргэлтийн төлөв шинэчлэгдлээ.');
       await _loadOrders();
     } catch (exception) {
       if (mounted) {
         _notice(
           context,
-          'Could not update delivery status: $exception',
+          'Хүргэлтийн төлөв шинэчлэгдсэнгүй: $exception',
           failed: true,
         );
       }
@@ -161,24 +162,24 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
-      helpText: 'Choose delivery invoice date',
+      helpText: 'Зарлагын баримтын огноо сонгох',
     );
     if (date == null || !mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Create delivery invoice?'),
+        title: const Text('Зарлагын баримт үүсгэх үү?'),
         content: const Text(
-          'This records an outgoing warehouse delivery for this order.',
+          'Энэ захиалгын дагуу агуулахаас бараа гаргасныг бүртгэнэ.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Болих'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Create delivery'),
+            child: const Text('Хүргэлт бүртгэх'),
           ),
         ],
       ),
@@ -187,13 +188,13 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
     setState(() => busyOrderIds.add(id));
     try {
       await api.post('/order/$id/ship', {'invoiceDate': _isoDateTime(date)});
-      if (mounted) _notice(context, 'Delivery invoice created.');
+      if (mounted) _notice(context, 'Зарлагын баримт үүслээ.');
       await _loadOrders();
     } catch (exception) {
       if (mounted) {
         _notice(
           context,
-          'Could not create delivery invoice: $exception',
+          'Зарлагын баримт үүсгэж чадсангүй: $exception',
           failed: true,
         );
       }
@@ -206,10 +207,10 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
   Widget build(BuildContext context) => Column(
     children: [
       _TopBar(
-        title: 'Zarlaga invoices',
-        subtitle: 'Orders and delivery status',
+        title: 'Зарлагын баримтууд',
+        subtitle: 'Захиалга ба хүргэлтийн төлөв',
         trailing: IconButton.filledTonal(
-          tooltip: 'Refresh invoices',
+          tooltip: 'Баримтуудыг шинэчлэх',
           onPressed: loading ? null : _loadOrders,
           icon: const Icon(Icons.refresh),
         ),
@@ -220,14 +221,14 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
           controller: searchController,
           onChanged: (value) => setState(() => search = value.trim()),
           decoration: const InputDecoration(
-            hintText: 'Search invoice number or company...',
+            hintText: 'Баримтын дугаар эсвэл байгууллагаар хайх…',
             prefixIcon: Icon(Icons.search),
           ),
         ),
       ),
       Expanded(
         child: loading
-            ? const _BusyBar('Loading orders…')
+            ? const _BusyBar('Захиалгуудыг ачаалж байна…')
             : error != null
             ? Center(
                 child: Column(
@@ -237,13 +238,13 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
                     const SizedBox(height: 12),
                     FilledButton(
                       onPressed: _loadOrders,
-                      child: const Text('Try again'),
+                      child: const Text('Дахин оролдох'),
                     ),
                   ],
                 ),
               )
             : filteredOrders.isEmpty
-            ? const Center(child: Text('No matching invoices.'))
+            ? const Center(child: Text('Тохирох баримт олдсонгүй.'))
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(26, 8, 26, 26),
                 itemCount: filteredOrders.length,
@@ -256,19 +257,21 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
   );
 
   Widget _invoiceCard(Map<String, dynamic> order) {
-    final statusCode = (order['status_code'] ?? 'Unknown').toString();
+    final statusCode = (order['status_code'] ?? 'Тодорхойгүй').toString();
     final choices = transitions[statusCode] ?? const <String>[];
     final orderId = order['id']?.toString() ?? '';
     final rowBusy = busyOrderIds.contains(orderId);
     final amount = _asInt(
       order['total_gross'] ?? order['total_amount'] ?? order['total'],
     );
-    final company = (order['company_name'] ?? 'Company not set').toString();
+    final company = (order['company_name'] ?? 'Байгууллага сонгоогүй')
+        .toString();
     final invoiceNumber = (order['invoice_number'] ?? orderId).toString();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: panelColor,
+        border: Border.all(color: lineColor),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -288,7 +291,7 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
               ),
               PopupMenuButton<String>(
                 enabled: choices.isNotEmpty && !rowBusy,
-                tooltip: 'Change delivery status',
+                tooltip: 'Хүргэлтийн төлөв солих',
                 onSelected: (next) => _changeStatus(order, next),
                 itemBuilder: (context) => choices
                     .map(
@@ -297,8 +300,8 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
                         child: Text(
                           code == 'ORDER_STATUS_PROCESSING' &&
                                   statusCode == 'ORDER_STATUS_RETURNED'
-                              ? 'Send back to preparation'
-                              : 'Mark as ${labels[code] ?? code}',
+                              ? 'Бэлтгэлд буцаах'
+                              : '${labels[code] ?? code} төлөвт шилжүүлэх',
                         ),
                       ),
                     )
@@ -327,7 +330,7 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
               .isNotEmpty) ...[
             const SizedBox(height: 3),
             Text(
-              'Register: ${order['company_register_number']}',
+              'Регистр: ${order['company_register_number']}',
               style: const TextStyle(color: muted, fontSize: 10),
             ),
           ],
@@ -338,12 +341,12 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
             spacing: 22,
             runSpacing: 8,
             children: [
-              _invoiceDatum('Amount', '₮${_money(amount.toDouble())}'),
+              _invoiceDatum('Дүн', '₮${_money(amount.toDouble())}'),
               _invoiceDatum(
-                'Invoice date',
+                'Баримтын огноо',
                 _displayApiDate(order['invoice_date']),
               ),
-              _invoiceDatum('Due date', _displayApiDate(order['due_date'])),
+              _invoiceDatum('Төлөх огноо', _displayApiDate(order['due_date'])),
             ],
           ),
           Wrap(
@@ -352,7 +355,7 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
               TextButton.icon(
                 onPressed: rowBusy ? null : () => _openOrder(order),
                 icon: const Icon(Icons.receipt_long_outlined),
-                label: const Text('View order details'),
+                label: const Text('Захиалга харах'),
               ),
               if (statusCode == 'ORDER_STATUS_RETURNED')
                 OutlinedButton.icon(
@@ -360,7 +363,7 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
                       ? null
                       : () => _openOrder(order, edit: true),
                   icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit returned order'),
+                  label: const Text('Буцаагдсан захиалгыг засах'),
                 ),
             ],
           ),
@@ -371,7 +374,7 @@ class _ZarlagaInvoicePageState extends State<ZarlagaInvoicePage> {
               child: OutlinedButton.icon(
                 onPressed: rowBusy ? null : () => _shipOrder(order),
                 icon: const Icon(Icons.local_shipping_outlined, size: 16),
-                label: const Text('Create delivery invoice'),
+                label: const Text('Зарлагын баримт үүсгэх'),
               ),
             ),
           ],
@@ -416,18 +419,18 @@ class ExpensePage extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       _TopBar(
-        title: 'Zarlaga',
-        subtitle: 'Expense tracking',
+        title: 'Зарлага',
+        subtitle: 'Зардлын бүртгэл',
         trailing: FilledButton.icon(
           onPressed: () => showDialog<void>(
             context: context,
             builder: (_) => const _NewExpenseDialog(),
           ),
           icon: const Icon(Icons.add, size: 17),
-          label: const Text('Add expense'),
+          label: const Text('Зардал бүртгэх'),
           style: FilledButton.styleFrom(
             backgroundColor: green,
-            foregroundColor: Colors.white,
+            foregroundColor: deepSpace,
           ),
         ),
       ),
@@ -439,31 +442,31 @@ class ExpensePage extends StatelessWidget {
               children: [
                 Expanded(
                   child: _MetricCard(
-                    title: 'Total expenses',
+                    title: 'Нийт зардал',
                     value: '₮ 1,284,500',
-                    detail: 'This month',
+                    detail: 'Энэ сар',
                     icon: Icons.payments_outlined,
-                    tint: const Color(0xFFEAF2EC),
+                    tint: activeSurface,
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: _MetricCard(
-                    title: 'Transactions',
+                    title: 'Гүйлгээ',
                     value: '24',
-                    detail: 'This month',
+                    detail: 'Энэ сар',
                     icon: Icons.receipt_long_outlined,
-                    tint: const Color(0xFFEAF0F6),
+                    tint: deepSpaceMid,
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: _MetricCard(
-                    title: 'Largest category',
-                    value: 'Supplies',
+                    title: 'Хамгийн их зардалтай ангилал',
+                    value: 'Хангамж',
                     detail: '₮ 462,000',
                     icon: Icons.inventory_2_outlined,
-                    tint: const Color(0xFFF5EFE1),
+                    tint: warningSurface,
                   ),
                 ),
               ],
@@ -472,7 +475,7 @@ class ExpensePage extends StatelessWidget {
             Row(
               children: [
                 const Text(
-                  'Recent expenses',
+                  'Сүүлийн зардлууд',
                   style: TextStyle(
                     color: ink,
                     fontSize: 17,
@@ -485,10 +488,10 @@ class ExpensePage extends StatelessWidget {
                   height: 39,
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Search expenses...',
+                      hintText: 'Зардал хайх…',
                       prefixIcon: const Icon(Icons.search, size: 18),
                       filled: true,
-                      fillColor: Colors.white,
+                      fillColor: inputSurface,
                       contentPadding: EdgeInsets.zero,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -502,7 +505,8 @@ class ExpensePage extends StatelessWidget {
             const SizedBox(height: 14),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: panelColor,
+                border: Border.all(color: lineColor),
                 borderRadius: BorderRadius.circular(15),
               ),
               child: Column(
@@ -516,7 +520,7 @@ class ExpensePage extends StatelessWidget {
             const SizedBox(height: 14),
             const Center(
               child: Text(
-                'Demo records · Connect the Oyudent expense API to load live data',
+                'Жишээ бүртгэл · Бодит мэдээллийг харахын тулд системд холбогдоно уу',
                 style: TextStyle(color: muted, fontSize: 11),
               ),
             ),

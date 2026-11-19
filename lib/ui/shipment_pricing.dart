@@ -2,13 +2,13 @@ part of '../main.dart';
 
 class _ShipmentTerms {
   final inputs = <String, String>{
-    'Exchange rate · ₮ per ¥': '',
-    'Freight': '0',
-    'Customs %': '0',
-    'Other costs · ₮': '0',
-    'Other costs %': '0',
-    'Gross margin %': '0',
-    'VAT %': '10',
+    'Валютын ханш · ₮/¥': '',
+    'Тээврийн зардал': '0',
+    'Гаалийн татвар %': '0',
+    'Бусад зардал · ₮': '0',
+    'Бусад зардал %': '0',
+    'Нийт ашгийн хувь': '0',
+    'НӨАТ %': '10',
   };
   String freightBasis = 'JPY';
   bool vat = true;
@@ -49,14 +49,14 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
   Widget build(BuildContext context) {
     final t = widget.terms;
     final values = t.inputs.map((k, v) => MapEntry(k, number(v)));
-    final fx = values['Exchange rate · ₮ per ¥'] ?? 0;
-    final margin = values['Gross margin %'] ?? 0,
-        vat = t.vat ? (values['VAT %'] ?? 0) : 0;
+    final fx = values['Валютын ханш · ₮/¥'] ?? 0;
+    final margin = values['Нийт ашгийн хувь'] ?? 0,
+        vat = t.vat ? (values['НӨАТ %'] ?? 0) : 0;
     var valid =
         fx > 0 &&
         margin < 100 &&
         values.entries.every(
-          (e) => e.value != null || (!t.vat && e.key == 'VAT %'),
+          (e) => e.value != null || (!t.vat && e.key == 'НӨАТ %'),
         );
     final costs = <double>[], quantities = <double>[];
     for (final l in widget.lines) {
@@ -78,7 +78,7 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
       goods += costs[i] * quantities[i];
     }
     final freight =
-        (values['Freight'] ?? 0) *
+        (values['Тээврийн зардал'] ?? 0) *
         switch (t.freightBasis) {
           'JPY' => fx,
           '%' => goods / 100,
@@ -88,9 +88,10 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
     final landed =
         base *
             (1 +
-                ((values['Customs %'] ?? 0) + (values['Other costs %'] ?? 0)) /
+                ((values['Гаалийн татвар %'] ?? 0) +
+                        (values['Бусад зардал %'] ?? 0)) /
                     100) +
-        (values['Other costs · ₮'] ?? 0);
+        (values['Бусад зардал · ₮'] ?? 0);
     final net = landed / (1 - margin / 100), gross = net * (1 + vat / 100);
     valid = valid && goods > 0 && gross.isFinite;
     String amount(double v) => valid ? '₮${_money(v)}' : '—';
@@ -105,17 +106,17 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
         initiallyExpanded: widget.expanded,
         collapsedBackgroundColor: deepSpace,
         backgroundColor: deepSpaceMid,
-        textColor: Colors.white,
-        collapsedTextColor: Colors.white,
+        textColor: ink,
+        collapsedTextColor: ink,
         iconColor: aquaGlow,
         collapsedIconColor: aquaGlow,
         leading: const Icon(Icons.calculate_outlined, color: aquaGlow),
         title: const Text(
-          'Shipment pricing',
+          'Өртөг ба борлуулах үнэ',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
-          '${t.currency} → MNT   ·   Freight, margin and VAT',
+          '${t.currency} → ₮   ·   Тээвэр, ашиг, НӨАТ',
           style: TextStyle(color: aquaGlow),
         ),
         children: [
@@ -132,19 +133,22 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                     runSpacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Text('Freight basis'),
+                      const Text('Тээврийн зардлыг тооцох арга'),
                       SegmentedButton<String>(
                         segments: [
                           ButtonSegment(value: 'JPY', label: Text(t.currency)),
                           ButtonSegment(value: 'MNT', label: Text('₮')),
-                          ButtonSegment(value: '%', label: Text('% of goods')),
+                          ButtonSegment(
+                            value: '%',
+                            label: Text('Барааны үнийн хувиар'),
+                          ),
                         ],
                         selected: {t.freightBasis},
                         onSelectionChanged: (s) =>
                             setState(() => t.freightBasis = s.first),
                       ),
                       FilterChip(
-                        label: const Text('Include VAT'),
+                        label: const Text('НӨАТ тооцох'),
                         selected: t.vat,
                         onSelected: (v) => setState(() => t.vat = v),
                       ),
@@ -153,10 +157,10 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                   _ProductFields(
                     children: [
                       for (final e in t.inputs.entries)
-                        if (t.vat || e.key != 'VAT %')
+                        if (t.vat || e.key != 'НӨАТ %')
                           field(
-                            e.key.startsWith('Exchange rate')
-                                ? '₮ per 1 ${t.currency}'
+                            e.key.startsWith('Валютын ханш')
+                                ? '1 ${t.currency} хэдэн төгрөгтэй тэнцэх вэ?'
                                 : e.key,
                             e.value,
                             (s) => t.inputs[e.key] = s,
@@ -186,7 +190,7 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                               spacing: 8,
                               children: [
                                 Text(
-                                  'Line ${i + 1} · ${product?['name'] ?? product?['mn_name'] ?? l.sourceName ?? "Product"}',
+                                  'Мөр ${i + 1} · ${product?['name'] ?? product?['mn_name'] ?? l.sourceName ?? "Бараа"}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -194,20 +198,20 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                                 _ProductFields(
                                   children: [
                                     field(
-                                      'Supplier price · ${t.currency}',
+                                      'Нийлүүлэгчийн үнэ · ${t.currency}',
                                       l.sourcePrice,
                                       (s) => l.sourcePrice = s,
                                     ),
                                     field(
-                                      'Pieces / purchase unit',
+                                      'Нэг савлагаан дахь ширхэг',
                                       l.pieces,
                                       (s) => l.pieces = s,
                                     ),
                                     FilterChip(
                                       label: Text(
                                         l.pricePerPiece
-                                            ? 'Price per piece'
-                                            : 'Price per purchase unit',
+                                            ? 'Ширхгийн үнэ'
+                                            : 'Савлагааны үнэ',
                                       ),
                                       selected: l.pricePerPiece,
                                       onSelected: (v) =>
@@ -216,7 +220,7 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                                   ],
                                 ),
                                 Text(
-                                  'Landed ${amount(unit)}   ·   Selling / unit ${amount(sale)}   ·   Selling / piece ${amount(valid ? sale / number(l.pieces)! : 0)}',
+                                  'Өртөг ${amount(unit)}   ·   Савлагааны зарах үнэ ${amount(sale)}   ·   Ширхгийн зарах үнэ ${amount(valid ? sale / number(l.pieces)! : 0)}',
                                 ),
                               ],
                             ),
@@ -225,15 +229,15 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                       },
                     ),
                   Text(
-                    'Landed ${amount(landed)}   ·   Before VAT ${amount(net)}   ·   VAT ${amount(gross - net)}   ·   Total ${amount(gross)}',
+                    'Өртөг ${amount(landed)}   ·   НӨАТ-гүй дүн ${amount(net)}   ·   НӨАТ ${amount(gross - net)}   ·   Нийт ${amount(gross)}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const Text(
-                    'Customs and percentage costs apply to goods plus freight. Costs are allocated by goods value. Selling price = landed cost ÷ (1 − margin), plus the selected VAT.',
+                    'Гааль болон хувиар тооцох зардлыг барааны үнэ, тээврийн зардлын нийлбэрээс бодно. Зардлыг барааны үнэд хувь тэнцүүлэн хуваарилна. Борлуулах үнэ = өртөг ÷ (1 − ашгийн хувь). НӨАТ сонгосон бол дээр нь нэмнэ.',
                   ),
                   FilledButton.icon(
                     icon: const Icon(Icons.check),
-                    label: const Text('Apply prices to invoice lines'),
+                    label: const Text('Тооцсон үнийг мөр бүрд оруулах'),
                     onPressed: !valid
                         ? null
                         : () {
@@ -250,7 +254,7 @@ class _ShipmentPricingState extends State<_ShipmentPricing> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Prices applied to this invoice draft.',
+                                  'Тооцсон үнийг баримтын төсөлд орууллаа.',
                                 ),
                               ),
                             );

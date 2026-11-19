@@ -1,0 +1,51 @@
+name: Windows installer
+on:
+  push:
+    branches: ['build/windows-*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Flutter
+        shell: pwsh
+        run: |
+          $sdk = Join-Path $env:RUNNER_TEMP flutter
+          git clone --quiet --depth 1 --branch 3.47.2 https://github.com/flutter/flutter.git $sdk
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "$sdk\bin" >> $env:GITHUB_PATH
+      - name: Build the Windows installer
+        shell: pwsh
+        run: |
+          if (!(Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") -and !(Get-Command ISCC.exe -ErrorAction SilentlyContinue)) {
+            choco install innosetup --version=6.6.1 --yes --no-progress
+            if ($LASTEXITCODE -notin @(0,3010)) { exit $LASTEXITCODE }
+          }
+          ./packaging/build-windows.ps1
+      - name: Test installation and startup
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem build/installers/*-windows-x64.exe).FullName
+          $dest = Join-Path $env:RUNNER_TEMP 'Oyudent Installed'
+          $install = Start-Process $installer -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=`"$dest`"" -Wait -PassThru
+          if ($install.ExitCode) { throw "Installer failed with code $($install.ExitCode)" }
+          foreach ($file in 'oyudent_pos.exe','flutter_windows.dll','data/app.so','data/flutter_assets/assets/oyudent-excel.html') {
+            if (!(Test-Path (Join-Path $dest $file))) { throw "Missing installed file: $file" }
+          }
+          $app = Start-Process "$dest/oyudent_pos.exe" -WorkingDirectory $dest -PassThru
+          try {
+            if ($app.WaitForExit(8000)) { throw "App exited at startup: $($app.ExitCode)" }
+          } finally {
+            if (!$app.HasExited) { Stop-Process -Id $app.Id }
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Oyudent-POS-Windows-x64
+          path: build/installers/*-windows-x64.exe
+          if-no-files-found: error

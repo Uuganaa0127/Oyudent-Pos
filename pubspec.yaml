@@ -7,7 +7,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   file_picker: ^10.3.3
+  archive: ^3.6.1
+  xml: ^7.0.1
   http: ^1.5.0
 flutter:
+  assets:
+    - assets/oyudent-excel.html
   uses-material-design: true

@@ -38,7 +38,7 @@ class KimiPi {
           r'insufficient[_ ](?:quota|balance)|billing[_ ]hard[_ ]limit|exceeded_current_quota_error|balance[_ ]not[_ ]enough',
         ).hasMatch(detail)) {
           throw FormatException(
-            'Kimi reported an account quota or balance limit during $stage (HTTP 429). Check your Kimi account limits and balance before retrying.',
+            '$stage · Kimi дансны ашиглалтын хязгаарт хүрлээ (HTTP 429). Дахин оролдохын өмнө дансны хязгаар, үлдэгдлээ шалгана уу.',
           );
         }
         throw ImportRateLimit(
@@ -52,11 +52,11 @@ class KimiPi {
           final ray =
               response.headers['cf-ray'] ?? response.headers['x-request-id'];
           throw FormatException(
-            'Kimi returned HTTP 520 during $stage. The gateway could not return a usable response. Wait a moment and retry the import.${ray == null ? "" : " Request ID: $ray"}',
+            '$stage · Kimi үйлчилгээнээс хариу ирсэнгүй (HTTP 520). Түр хүлээгээд дахин оролдоно уу.${ray == null ? "" : " Хүсэлтийн дугаар: $ray"}',
           );
         }
         throw FormatException(
-          'Kimi returned HTTP ${response.statusCode}. Check the key, file format and account balance, or paste the invoice text.',
+          'Kimi HTTP ${response.statusCode} алдаа буцаалаа. Түлхүүр, файлын төрөл, дансны үлдэгдлээ шалгах эсвэл нэхэмжлэхийн текстийг оруулна уу.',
         );
       }
       return jsonDecode(utf8.decode(response.bodyBytes))
@@ -68,7 +68,9 @@ class KimiPi {
       if (file != null) {
         final bytes = file.bytes;
         if (bytes == null || bytes.isEmpty)
-          throw const FormatException('The file is empty or unreadable.');
+          throw const FormatException(
+            'Файл хоосон эсвэл унших боломжгүй байна.',
+          );
         final mime = {
           'jpg': 'jpeg',
           'jpeg': 'jpeg',
@@ -85,7 +87,7 @@ class KimiPi {
             },
           ];
         } else {
-          remoteId = await step('Uploading invoice', (_) async {
+          remoteId = await step('Нэхэмжлэх илгээж байна', (_) async {
             final upload =
                 http.MultipartRequest('POST', Uri.parse('$base/files'))
                   ..headers.addAll(headers)
@@ -99,37 +101,39 @@ class KimiPi {
                   );
             return checked(
                   await timedHttp(
-                    'File upload',
+                    'Файл илгээх',
                     const Duration(minutes: 2),
                     (client) async =>
                         http.Response.fromStream(await client.send(upload)),
                   ),
-                  'file upload',
+                  'Файл илгээх',
                 )['id']
                 as String;
           });
           final extracted = await step(
-            'Extracting document text',
+            'Баримтын текстийг таньж байна',
             (_) async => checked(
               await timedHttp(
-                'Document extraction',
+                'Баримтын текст таних',
                 const Duration(minutes: 2),
                 (client) => client.get(
                   Uri.parse('$base/files/$remoteId/content'),
                   headers: headers,
                 ),
               ),
-              'document extraction',
+              'Баримтын текст таних',
             )['content'],
           );
           if (extracted is! String || extracted.trim().isEmpty)
             throw const FormatException(
-              'No text found. Try a page image or paste the text.',
+              'Текст олдсонгүй. Тод зураг сонгох эсвэл текстээ оруулна уу.',
             );
           content = extracted;
         }
       }
-      final raw = await step('Reading invoice lines', (label) async {
+      final raw = await step('Нэхэмжлэхийн мөрүүдийг уншиж байна', (
+        label,
+      ) async {
         final client = http.Client(), elapsed = Stopwatch()..start();
         try {
           final request =
@@ -159,7 +163,7 @@ Separate purchase quantity from pieces inside a pack. price_basis is "piece", "p
             if (response.statusCode != 200)
               checked(
                 await http.Response.fromStream(response),
-                'invoice reading',
+                'Нэхэмжлэх унших',
               );
             final result = StringBuffer();
             bool started = false;
@@ -175,7 +179,7 @@ Separate purchase quantity from pieces inside a pack. price_basis is "piece", "p
               final event = jsonDecode(packet);
               if (event['error'] != null)
                 throw const FormatException(
-                  'Kimi stopped reading the invoice.',
+                  'Kimi нэхэмжлэхийг уншихаа зогсоолоо.',
                 );
               final choices = event['choices'];
               if (choices is List && choices.isNotEmpty) {
@@ -184,7 +188,7 @@ Separate purchase quantity from pieces inside a pack. price_basis is "piece", "p
                   if (!started) {
                     started = true;
                     onStage?.call(
-                      '$label · receiving result (first text after ${elapsed.elapsed.inSeconds}s)',
+                      '$label · Хариу авч байна (эхний текст ${elapsed.elapsed.inSeconds} секундын дараа ирлээ)',
                     );
                   }
                   result.write(text);
@@ -192,7 +196,7 @@ Separate purchase quantity from pieces inside a pack. price_basis is "piece", "p
               }
             }
             throw const FormatException(
-              'Kimi closed the stream before completing the invoice. Retry the import.',
+              'Нэхэмжлэхийг бүрэн уншихаас өмнө холболт тасарлаа. Дахин импортлоно уу.',
             );
           }
 
@@ -219,14 +223,14 @@ Separate purchase quantity from pieces inside a pack. price_basis is "piece", "p
                 ].any((v) => v != null && v.toString().trim().isNotEmpty),
           ))
         throw const FormatException(
-          'No identifiable invoice items. Try a clearer file or paste its text.',
+          'Барааны мөр олдсонгүй. Илүү тод файл сонгох эсвэл текстээ оруулна уу.',
         );
       return data;
     } finally {
       if (remoteId != null) {
         try {
           await timedHttp(
-            'Temporary file cleanup',
+            'Түр файл устгах',
             const Duration(seconds: 8),
             (client) => client.delete(
               Uri.parse('$base/files/$remoteId'),

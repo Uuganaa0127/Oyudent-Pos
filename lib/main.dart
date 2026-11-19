@@ -1,7 +1,11 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/foundation.dart' show compute;
+import 'services/invoice_excel.dart';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +19,7 @@ part 'ui/warehouse_search.dart';
 
 part 'ui/app_theme.dart';
 part 'ui/design_tokens.dart';
+part 'ui/identity.dart';
 part 'ui/reference_page.dart';
 part 'ui/login_page.dart';
 part 'ui/pos_shell.dart';

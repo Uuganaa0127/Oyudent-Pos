@@ -191,107 +191,120 @@ class _ReferencePageState extends State<_ReferencePage> {
                   !date.isBefore(dates!.start) &&
                   date.isBefore(dates!.end.add(const Duration(days: 1))));
     }).toList();
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Туслах утга', style: Theme.of(context).textTheme.headlineSmall),
-          Wrap(
-            spacing: 6,
-            children: [
-              for (final entry in groups.entries)
-                ChoiceChip(
-                  label: Text(entry.value),
-                  selected: group == entry.key,
-                  onSelected: (_) {
-                    setState(() {
-                      group = entry.key;
-                      query = '';
-                      dates = null;
-                    });
-                    load();
-                  },
+    return Column(
+      children: [
+        _TopBar(title: 'Туслах утга', subtitle: groups[group] ?? group),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    for (final entry in groups.entries)
+                      ChoiceChip(
+                        label: Text(entry.value),
+                        selected: group == entry.key,
+                        onSelected: (_) {
+                          setState(() {
+                            group = entry.key;
+                            query = '';
+                            dates = null;
+                          });
+                          load();
+                        },
+                      ),
+                  ],
                 ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  key: ValueKey(group),
-                  decoration: const InputDecoration(labelText: 'Нэрээр хайх'),
-                  onChanged: (v) =>
-                      setState(() => query = v.trim().toLowerCase()),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Үүсгэсэн огноо',
-                onPressed: () async {
-                  final range = await showDateRangePicker(
-                    context: context,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime.now(),
-                    initialDateRange: dates,
-                  );
-                  if (mounted && range != null) setState(() => dates = range);
-                },
-                icon: const Icon(Icons.date_range),
-              ),
-              if (dates != null)
-                IconButton(
-                  onPressed: () => setState(() => dates = null),
-                  icon: const Icon(Icons.clear),
-                ),
-              IconButton(onPressed: load, icon: const Icon(Icons.refresh)),
-              FilledButton(
-                onPressed: loading ? null : () => edit(),
-                child: const Text('Нэмэх'),
-              ),
-            ],
-          ),
-          Expanded(
-            child: loading
-                ? const _BusyBar('Туслах утга ачаалж байна…')
-                : error != null
-                ? Center(child: Text(error!))
-                : ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (_, i) {
-                      final row = filtered[i];
-                      return ListTile(
-                        title: Text(row['name'].toString()),
-                        subtitle: Text(
-                          [
-                            row['additional_name'] ?? row['additionalName'],
-                            row['created_at'],
-                          ].whereType<String>().join(' · '),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        key: ValueKey(group),
+                        decoration: const InputDecoration(
+                          labelText: 'Нэрээр хайх',
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Засах',
-                              onPressed: row['id'] == null
-                                  ? null
-                                  : () => edit(row),
-                              icon: const Icon(Icons.edit_outlined),
-                            ),
-                            IconButton(
-                              tooltip: 'Устгах',
-                              onPressed: row['id'] == null
-                                  ? null
-                                  : () => remove(row),
-                              icon: const Icon(Icons.delete_outline),
-                            ),
-                          ],
+                        onChanged: (v) =>
+                            setState(() => query = v.trim().toLowerCase()),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Үүсгэсэн огноо',
+                      onPressed: () async {
+                        final range = await showDateRangePicker(
+                          context: context,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime.now(),
+                          initialDateRange: dates,
+                        );
+                        if (mounted && range != null)
+                          setState(() => dates = range);
+                      },
+                      icon: const Icon(Icons.date_range),
+                    ),
+                    if (dates != null)
+                      IconButton(
+                        onPressed: () => setState(() => dates = null),
+                        icon: const Icon(Icons.clear),
+                      ),
+                    IconButton(
+                      onPressed: load,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                    FilledButton(
+                      onPressed: loading ? null : () => edit(),
+                      child: const Text('Нэмэх'),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: loading
+                      ? const _BusyBar('Туслах утга ачаалж байна…')
+                      : error != null
+                      ? Center(child: Text(error!))
+                      : ListView.builder(
+                          itemCount: filtered.length,
+                          itemBuilder: (_, i) {
+                            final row = filtered[i];
+                            return ListTile(
+                              title: Text(row['name'].toString()),
+                              subtitle: Text(
+                                [
+                                  row['additional_name'] ??
+                                      row['additionalName'],
+                                  row['created_at'],
+                                ].whereType<String>().join(' · '),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Засах',
+                                    onPressed: row['id'] == null
+                                        ? null
+                                        : () => edit(row),
+                                    icon: const Icon(Icons.edit_outlined),
+                                  ),
+                                  IconButton(
+                                    tooltip: 'Устгах',
+                                    onPressed: row['id'] == null
+                                        ? null
+                                        : () => remove(row),
+                                    icon: const Icon(Icons.delete_outline),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

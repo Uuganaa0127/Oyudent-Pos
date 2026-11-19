@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
     final username = usernameController.text.trim();
     final password = passwordController.text;
     if (username.isEmpty || password.isEmpty) {
-      setState(() => loginError = 'Enter your username and password.');
+      setState(() => loginError = 'Нэвтрэх нэр, нууц үгээ оруулна уу.');
       return;
     }
     setState(() {
@@ -94,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         setState(() {
           loginError = error is SocketException || error is http.ClientException
-              ? 'Could not connect to Oyudent. Check your internet connection and try again.'
+              ? 'Оюудентийн системтэй холбогдож чадсангүй. Интернэт холболтоо шалгаад дахин оролдоно уу.'
               : '$error'.replaceFirst('Exception: ', '');
         });
       }
@@ -110,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [deepSpace, deepSpaceMid, Color(0xFF242044)],
+          colors: [deepSpace, deepSpaceMid, Color(0xFFF2F0F8)],
         ),
       ),
       child: LayoutBuilder(
@@ -120,10 +120,16 @@ class _LoginPageState extends State<LoginPage> {
             padding: EdgeInsets.all(wide ? 36 : 24),
             decoration: BoxDecoration(
               color: panelColor,
-              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: lineColor),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(5),
+                topRight: Radius.circular(26),
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(5),
+              ),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x36030615),
+                  color: Color(0x29155B76),
                   blurRadius: 36,
                   offset: Offset(0, 12),
                 ),
@@ -135,7 +141,7 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Sign in',
+                    'Нэвтрэх',
                     style: TextStyle(
                       fontSize: 32,
                       letterSpacing: -1.3,
@@ -144,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 22),
-                  const _FieldLabel('Email or username'),
+                  const _FieldLabel('Цахим шуудан эсвэл нэвтрэх нэр'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: usernameController,
@@ -157,7 +163,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   const SizedBox(height: 19),
-                  const _FieldLabel('Password'),
+                  const _FieldLabel('Нууц үг'),
                   const SizedBox(height: 8),
                   TextField(
                     controller: passwordController,
@@ -165,7 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                     obscureText: !showPassword,
                     onSubmitted: (_) => _login(),
                     decoration: InputDecoration(
-                      hintText: 'Enter your password',
+                      hintText: 'Нууц үгээ оруулна уу',
                       prefixIcon: const Icon(Icons.lock_outline, size: 19),
                       suffixIcon: IconButton(
                         onPressed: () =>
@@ -185,15 +191,12 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(11),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFF1F0),
+                        color: errorSurface,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         loginError!,
-                        style: const TextStyle(
-                          color: Color(0xFF9E3128),
-                          fontSize: 12,
-                        ),
+                        style: const TextStyle(color: errorInk, fontSize: 12),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -215,11 +218,11 @@ class _LoginPageState extends State<LoginPage> {
                               height: 18,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Colors.white,
+                                color: deepSpace,
                               ),
                             )
                           : const Text(
-                              'Sign in',
+                              'Нэвтрэх',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -230,7 +233,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 18),
                   const Center(
                     child: Text(
-                      'Sign in with your admin.oyudent.com account',
+                      'admin.oyudent.com бүртгэлээрээ нэвтэрнэ үү',
                       style: TextStyle(color: muted, fontSize: 11),
                     ),
                   ),
@@ -241,7 +244,16 @@ class _LoginPageState extends State<LoginPage> {
           return Stack(
             fit: StackFit.expand,
             children: [
-              const CustomPaint(painter: _ScannerPattern()),
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: MediaQuery.disableAnimationsOf(context)
+                    ? Duration.zero
+                    : const Duration(milliseconds: 1100),
+                curve: Curves.easeOutCubic,
+                builder: (_, value, _) => RepaintBoundary(
+                  child: CustomPaint(painter: _ScannerPattern(value)),
+                ),
+              ),
               Center(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(wide ? 48 : 18),
@@ -255,12 +267,20 @@ class _LoginPageState extends State<LoginPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    _Brand(inverse: true),
-                                    SizedBox(height: 32),
+                                    _Brand(),
+                                    SizedBox(height: 20),
+                                    SizedBox(
+                                      width: 225,
+                                      height: 190,
+                                      child: CustomPaint(
+                                        painter: _MolarMark(detailed: true),
+                                      ),
+                                    ),
+                                    SizedBox(height: 20),
                                     Text(
-                                      'Point of sale',
+                                      'Борлуулалт',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: ink,
                                         fontSize: 52,
                                         height: 1.05,
                                         fontWeight: FontWeight.w700,
@@ -277,7 +297,7 @@ class _LoginPageState extends State<LoginPage> {
                         : Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const _Brand(inverse: true),
+                              const _Brand(),
                               const SizedBox(height: 22),
                               form,
                             ],
@@ -294,10 +314,11 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _ScannerPattern extends CustomPainter {
-  const _ScannerPattern();
+  final double reveal;
+  const _ScannerPattern(this.reveal);
   @override
   void paint(Canvas canvas, Size size) {
-    final grid = Paint()..color = const Color(0x0CFFFFFF);
+    final grid = Paint()..color = const Color(0x0D35636A);
     for (double x = 0; x < size.width; x += 40)
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
     for (double y = 0; y < size.height; y += 40)
@@ -306,7 +327,7 @@ class _ScannerPattern extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.3;
     for (var i = 0; i < 22; i++) {
-      final dy = i * 8.0;
+      final dy = i * 8.0 + (1 - reveal) * 48;
       final wave = Path()
         ..moveTo(-8, size.height * .79 + dy)
         ..cubicTo(
@@ -327,5 +348,6 @@ class _ScannerPattern extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ScannerPattern oldDelegate) => false;
+  bool shouldRepaint(_ScannerPattern oldDelegate) =>
+      reveal != oldDelegate.reveal;
 }

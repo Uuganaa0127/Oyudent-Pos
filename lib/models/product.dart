@@ -71,7 +71,7 @@ class Product {
                 stock['product_mn_name'] ??
                 stock['name'] ??
                 stock['mn_name'] ??
-                'Product')
+                'Бараа')
             .toString();
     final categoryName = (stock['category_name'] ?? stock['category'] ?? '')
         .toString();
@@ -88,10 +88,10 @@ class Product {
     ].where((part) => part.trim().isNotEmpty).join(' · ');
     return Product(
       name,
-      detail.isEmpty ? 'Inventory item' : detail,
+      detail.isEmpty ? 'Бараа' : detail,
       _asInt(stock['unit_price'] ?? stock['base_unit_price'] ?? stock['price']),
       '📦',
-      const Color(0xFFE9EFE4),
+      deepSpaceMid,
       reference: (stock['sku'] ?? stock['product_code'] ?? stock['code'] ?? '')
           .toString(),
       lotNumber: (stock['lot_number'] ?? stock['expiration_date'] ?? '')
@@ -116,18 +116,18 @@ class Product {
         (product['name'] ??
                 product['mn_name'] ??
                 product['product_display_name'] ??
-                'Product')
+                'Бараа')
             .toString();
     final categoryName = (product['category_name'] ?? '').toString();
     final description = (product['description'] ?? '').toString();
     return Product(
       name,
       description.trim().isEmpty
-          ? (categoryName.isEmpty ? 'No stock in this branch' : categoryName)
+          ? (categoryName.isEmpty ? 'Энэ салбарт үлдэгдэлгүй' : categoryName)
           : description,
       0,
       '📦',
-      const Color(0xFFE9EFE4),
+      deepSpaceMid,
       reference: (product['code'] ?? product['sku'] ?? '').toString(),
       lotNumber: '',
       barcode: '',
@@ -206,7 +206,7 @@ String _apiMessage(Map<String, dynamic> body, int statusCode) {
   if (errors is List && errors.isNotEmpty) return errors.first.toString();
   return (body['message'] ??
           body['error'] ??
-          'API request failed ($statusCode)')
+          'Системийн хүсэлт амжилтгүй ($statusCode)')
       .toString();
 }
 
@@ -217,7 +217,7 @@ String _refName(Map<String, dynamic> value) =>
             value['title'] ??
             value['code'] ??
             value['id'] ??
-            'Option')
+            'Сонголт')
         .toString();
 
 String _formatInvoiceDate(DateTime date) {

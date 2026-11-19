@@ -37,7 +37,7 @@ class _ProductsPageState extends State<ProductsPage> {
   Widget build(BuildContext context) => Column(
     children: [
       _TopBar(
-        title: 'Products',
+        title: 'Бараа',
         subtitle: widget.warehouse,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -54,7 +54,7 @@ class _ProductsPageState extends State<ProductsPage> {
                       if (created == true) await widget.onReload();
                     },
               icon: const Icon(Icons.add, size: 17),
-              label: const Text('Add product'),
+              label: const Text('Бараа нэмэх'),
             ),
             const SizedBox(width: 8),
             FilledButton.icon(
@@ -64,10 +64,10 @@ class _ProductsPageState extends State<ProductsPage> {
                     _ProductBulkImportDialog(apiToken: widget.apiToken),
               ),
               icon: const Icon(Icons.upload_file_outlined, size: 17),
-              label: const Text('Import products'),
+              label: const Text('Бараа импортлох'),
               style: FilledButton.styleFrom(
                 backgroundColor: green,
-                foregroundColor: Colors.white,
+                foregroundColor: deepSpace,
               ),
             ),
           ],
@@ -81,7 +81,7 @@ class _ProductsPageState extends State<ProductsPage> {
               children: [
                 const Expanded(
                   child: Text(
-                    'Warehouse inventory',
+                    'Агуулахын бараа',
                     style: TextStyle(
                       color: ink,
                       fontSize: 17,
@@ -90,7 +90,7 @@ class _ProductsPageState extends State<ProductsPage> {
                   ),
                 ),
                 Text(
-                  '${filteredProducts.length} products',
+                  '${filteredProducts.length} бараа',
                   style: const TextStyle(color: muted, fontSize: 11),
                 ),
               ],
@@ -100,12 +100,12 @@ class _ProductsPageState extends State<ProductsPage> {
               controller: searchController,
               onChanged: (value) => setState(() => query = value.trim()),
               decoration: InputDecoration(
-                hintText: 'Search English/Mongolian name, reference, barcode, manufacturer…',
+                hintText: 'Монгол, англи нэр, лавлах дугаар, баркод, үйлдвэрлэгчээр хайх…',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: query.isEmpty
                     ? null
                     : IconButton(
-                        tooltip: 'Clear search',
+                        tooltip: 'Хайлтыг арилгах',
                         onPressed: () {
                           searchController.clear();
                           setState(() => query = '');
@@ -117,7 +117,8 @@ class _ProductsPageState extends State<ProductsPage> {
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: panelColor,
+                border: Border.all(color: lineColor),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Column(
@@ -134,7 +135,7 @@ class _ProductsPageState extends State<ProductsPage> {
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Edit product',
+                          tooltip: 'Бараа засах',
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: product.apiStock == null
                               ? null
@@ -164,8 +165,8 @@ class _ProductsPageState extends State<ProductsPage> {
             Center(
               child: Text(
                 query.isEmpty
-                    ? 'Search by English/Mongolian name, reference, barcode, or manufacturer'
-                    : '${filteredProducts.length} products match “$query”',
+                    ? 'Монгол, англи нэр, лавлах дугаар, баркод эсвэл үйлдвэрлэгчээр хайна уу'
+                    : '«$query» хайлтаар ${filteredProducts.length} бараа олдлоо',
                 style: TextStyle(color: muted, fontSize: 11),
               ),
             ),
@@ -243,11 +244,11 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
       final file = result?.files.single;
       if (file == null) return null;
       if (file.bytes == null || file.bytes!.isEmpty) {
-        throw const FormatException('The selected image could not be read.');
+        throw const FormatException('Сонгосон зургийг уншиж чадсангүй.');
       }
       return mounted ? file : null;
     } catch (e) {
-      if (mounted) setState(() => error = 'Could not open photo: $e');
+      if (mounted) setState(() => error = 'Зураг нээж чадсангүй: $e');
       return null;
     }
   }
@@ -269,7 +270,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
         if (!mounted) return;
         final data = Map<String, dynamic>.from(response['data'] as Map);
         if (data['id']?.toString() != widget.editId)
-          throw StateError('Could not identify this product.');
+          throw StateError('Барааг таньж чадсангүй.');
         name.text = data['name'] ?? '';
         mongolianName.text = data['mnName'] ?? '';
         code.text = data['code'] ?? '';
@@ -392,7 +393,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
         enabled: !saving,
         decoration: InputDecoration(
           labelText: label,
-          hintText: 'Search by name',
+          hintText: 'Нэрээр хайх',
           prefixIcon: const Icon(Icons.search),
         ),
         onChanged: (_) {
@@ -423,15 +424,15 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => error = 'Could not read product details: $e');
+      if (mounted)
+        setState(() => error = 'Барааны мэдээллийг уншиж чадсангүй: $e');
     }
   }
 
   Future<void> _generateBarcode(int index) async {
     if ((categoryCode ?? '').isEmpty || (supplierCode ?? '').isEmpty) {
       setState(
-        () => error =
-            'Choose category and manufacturer before generating a barcode.',
+        () => error = 'Баркод үүсгэхийн өмнө ангилал, үйлдвэрлэгч сонгоно уу.',
       );
       return;
     }
@@ -471,8 +472,8 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
         (supplierCode ?? '').isEmpty) {
       setState(
         () => error = addVariantToExisting
-            ? 'Choose a product before adding its variant.'
-            : 'Enter a product name, category, and manufacturer.',
+            ? 'Хувилбар нэмэхийн өмнө бараа сонгоно уу.'
+            : 'Барааны нэр, ангилал, үйлдвэрлэгчийг оруулна уу.',
       );
       return;
     }
@@ -484,9 +485,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
       for (var i = 0; i < variants.length; i++) {
         if (variants[i].barcode.text.trim().isEmpty) await _generateBarcode(i);
         if (variants[i].barcode.text.trim().isEmpty)
-          throw Exception(
-            'Generate a barcode for every variant before saving.',
-          );
+          throw Exception('Хадгалахын өмнө хувилбар бүрд баркод үүсгэнэ үү.');
       }
       var productId = selectedExistingProductId;
       if (!addVariantToExisting) {
@@ -514,9 +513,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
             (data is Map ? data['id']?.toString() : data?.toString());
       }
       if (productId == null || productId.isEmpty)
-        throw Exception(
-          'Product was created but the API did not return its ID.',
-        );
+        throw Exception('Бараа үүссэн боловч системээс дугаар нь ирсэнгүй.');
       if (!addVariantToExisting && productImage != null) {
         await api.uploadImage(
           '/product/image',
@@ -554,13 +551,13 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
       }
       widget.onCreated?.call(productId);
       if (mounted) {
-        _notice(context, 'Product and variants saved.');
+        _notice(context, 'Бараа, хувилбарууд хадгалагдлаа.');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => error = e.toString());
-        _notice(context, 'Could not finish saving: $e', failed: true);
+        _notice(context, 'Хадгалж чадсангүй: $e', failed: true);
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -571,16 +568,14 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
   Widget build(BuildContext context) => AlertDialog(
     insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
     title: Text(
-      widget.editId == null
-          ? 'Add product and variants'
-          : 'Edit product and variants',
+      widget.editId == null ? 'Бараа, хувилбар нэмэх' : 'Бараа, хувилбар засах',
     ),
     content: SizedBox(
       width: 720,
       child: loading
           ? const SizedBox(
               height: 180,
-              child: _BusyBar('Loading product details…'),
+              child: _BusyBar('Барааны мэдээллийг ачаалж байна…'),
             )
           : SingleChildScrollView(
               child: Column(
@@ -593,11 +588,11 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                       segments: const [
                         ButtonSegment(
                           value: false,
-                          label: Text('Create new product'),
+                          label: Text('Шинэ бараа үүсгэх'),
                         ),
                         ButtonSegment(
                           value: true,
-                          label: Text('Add variant to existing'),
+                          label: Text('Бүртгэлтэй бараанд хувилбар нэмэх'),
                         ),
                       ],
                       selected: {addVariantToExisting},
@@ -615,7 +610,8 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                         TextField(
                           controller: productSearch,
                           decoration: const InputDecoration(
-                            labelText: 'Search product name or reference',
+                            labelText:
+                                'Барааны нэр эсвэл лавлах дугаараар хайх',
                           ),
                           onChanged: (_) => setState(() {
                             selectedExistingProductId = null;
@@ -627,7 +623,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                           key: ValueKey(productSearch.text),
                           initialValue: selectedExistingProductId,
                           decoration: const InputDecoration(
-                            labelText: 'Existing product *',
+                            labelText: 'Бүртгэлтэй бараа *',
                           ),
                           items: _filteredProducts
                               .map(
@@ -649,27 +645,25 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                     TextField(
                       controller: name,
                       decoration: const InputDecoration(
-                        labelText: 'Product name *',
+                        labelText: 'Барааны нэр *',
                       ),
                     ),
                     TextField(
                       controller: mongolianName,
                       decoration: const InputDecoration(
-                        labelText: 'Mongolian name',
+                        labelText: 'Монгол нэр',
                       ),
                     ),
                     TextField(
                       controller: code,
                       decoration: const InputDecoration(
-                        labelText: 'Reference number (optional)',
+                        labelText: 'Лавлах дугаар (заавал биш)',
                       ),
                     ),
                     TextField(
                       controller: description,
                       maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                      ),
+                      decoration: const InputDecoration(labelText: 'Тайлбар'),
                     ),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -683,7 +677,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                               },
                         icon: const Icon(Icons.image_outlined),
                         label: Text(
-                          productImage?.name ?? 'Choose product photo',
+                          productImage?.name ?? 'Барааны зураг сонгох',
                         ),
                       ),
                     ),
@@ -704,13 +698,13 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                         ),
                       ),
                     _picker(
-                      'category',
+                      'Ангилал',
                       categories,
                       categoryCode,
                       (v) => setState(() => categoryCode = v),
                     ),
                     _picker(
-                      'manufacturer',
+                      'Үйлдвэрлэгч',
                       suppliers,
                       supplierCode,
                       (v) => setState(() => supplierCode = v),
@@ -722,7 +716,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
-                          'Product category and manufacturer loaded for automatic barcode generation.',
+                          'Баркод үүсгэхэд шаардлагатай ангилал, үйлдвэрлэгчийн мэдээлэл бэлэн.',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -733,7 +727,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                     final variant = entry.value;
                     return Card(
                       key: ObjectKey(variant),
-                      color: const Color(0xfff6f8f6),
+                      color: inputSurface,
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -742,7 +736,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    'Variant ${i + 1}',
+                                    'Хувилбар ${i + 1}',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -765,7 +759,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                                 TextField(
                                   controller: variant.barcode,
                                   decoration: InputDecoration(
-                                    labelText: 'Variant barcode',
+                                    labelText: 'Хувилбарын баркод',
                                     suffixIcon: IconButton(
                                       onPressed: saving
                                           ? null
@@ -777,7 +771,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                                 TextField(
                                   controller: variant.weight,
                                   decoration: const InputDecoration(
-                                    labelText: 'Size / weight',
+                                    labelText: 'Хэмжээ / жин',
                                   ),
                                 ),
                               ],
@@ -808,26 +802,27 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                                       },
                                 icon: const Icon(Icons.image_outlined),
                                 label: Text(
-                                  variant.image?.name ?? 'Choose variant photo',
+                                  variant.image?.name ??
+                                      'Хувилбарын зураг сонгох',
                                 ),
                               ),
                             ),
                             _ProductFields(
                               children: [
                                 _picker(
-                                  'unit',
+                                  'Нэгж',
                                   units,
                                   variant.unitCode,
                                   (v) => setState(() => variant.unitCode = v),
                                 ),
                                 _picker(
-                                  'color',
+                                  'Өнгө',
                                   colors,
                                   variant.colorCode,
                                   (v) => setState(() => variant.colorCode = v),
                                 ),
                                 _picker(
-                                  'product size',
+                                  'Барааны хэмжээ',
                                   sizes,
                                   variant.sizeCode,
                                   (v) => setState(() => variant.sizeCode = v),
@@ -845,7 +840,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                       onPressed: () =>
                           setState(() => variants.add(_NewProductVariant())),
                       icon: const Icon(Icons.add),
-                      label: const Text('Add variant'),
+                      label: const Text('Хувилбар нэмэх'),
                     ),
                   ),
                   if (error != null)
@@ -853,7 +848,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         error!,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: errorInk),
                       ),
                     ),
                 ],
@@ -863,7 +858,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
     actions: [
       TextButton(
         onPressed: saving ? null : () => Navigator.pop(context, false),
-        child: const Text('Cancel'),
+        child: const Text('Болих'),
       ),
       FilledButton(
         onPressed:
@@ -876,7 +871,7 @@ class _ProductCreateDialogState extends State<_ProductCreateDialog> {
                 height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : const Text('Save product'),
+            : const Text('Бараа хадгалах'),
       ),
     ],
   );

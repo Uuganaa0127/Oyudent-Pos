@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
+    "@tesseract.js-data/mon": "1.0.0",
+    "pdfjs-dist": "4.10.38",
+    "tesseract.js": "6.0.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "private": true,
+  "name": "oyudent-invoice-converter"
+}

@@ -12,7 +12,7 @@ class _GlobalStockWarning extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Material(
-    color: const Color(0xFFFFF5E5),
+    color: warningSurface,
     child: InkWell(
       onTap: onTap,
       child: Padding(
@@ -21,30 +21,30 @@ class _GlobalStockWarning extends StatelessWidget {
           children: [
             const Icon(
               Icons.warning_amber_rounded,
-              color: Color(0xFFB45309),
+              color: warningInk,
               size: 19,
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                '$company · $warehouse: $count product${count == 1 ? '' : 's'} at or below 5 in stock',
+                '$company · $warehouse: $count нэр төрлийн барааны үлдэгдэл 5 буюу түүнээс бага байна',
                 style: const TextStyle(
-                  color: Color(0xFF87430B),
+                  color: warningInk,
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             const Text(
-              'View',
+              'Харах',
               style: TextStyle(
-                color: Color(0xFF87430B),
+                color: warningInk,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(width: 5),
-            const Icon(Icons.chevron_right, color: Color(0xFF87430B), size: 17),
+            const Icon(Icons.chevron_right, color: warningInk, size: 17),
           ],
         ),
       ),
@@ -53,41 +53,39 @@ class _GlobalStockWarning extends StatelessWidget {
 }
 
 class _Brand extends StatelessWidget {
-  final bool inverse;
-  const _Brand({this.inverse = false});
+  const _Brand();
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: inverse ? aquaGlow : green,
-          borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context) => const FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox.square(
+          dimension: 36,
+          child: CustomPaint(painter: _MolarMark()),
         ),
-        child: const Icon(Icons.storefront_rounded, size: 19, color: deepSpace),
-      ),
-      const SizedBox(width: 10),
-      Text(
-        'oyudent',
-        style: TextStyle(
-          color: inverse ? Colors.white : ink,
-          fontSize: 19,
-          fontWeight: FontWeight.w700,
-          letterSpacing: -.6,
+        SizedBox(width: 8),
+        Text(
+          'OYUDENT',
+          style: TextStyle(
+            color: ink,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.2,
+          ),
         ),
-      ),
-      const SizedBox(width: 6),
-      Text(
-        'POS',
-        style: TextStyle(
-          color: inverse ? const Color(0xFFB2BCD7) : muted,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
+        SizedBox(width: 5),
+        Text(
+          'POS',
+          style: TextStyle(
+            color: aquaGlow,
+            fontFamily: 'monospace',
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }
 
@@ -122,27 +120,35 @@ class _NavItem extends StatelessWidget {
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
-      child: Container(
+      child: AnimatedContainer(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 160),
         height: 42,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF414980) : Colors.transparent,
+          color: selected ? activeSurface : Colors.transparent,
+          border: Border(
+            left: BorderSide(
+              width: 3,
+              color: selected ? green : Colors.transparent,
+            ),
+          ),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? aquaGlow : const Color(0xFFB2BCD7),
-            ),
+            Icon(icon, size: 18, color: selected ? green : muted),
             const SizedBox(width: 11),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFFD6DDEF),
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? green : ink,
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                ),
               ),
             ),
           ],
@@ -157,34 +163,60 @@ class _TopBar extends StatelessWidget {
   final Widget? trailing;
   const _TopBar({required this.title, required this.subtitle, this.trailing});
   @override
-  Widget build(BuildContext context) => Container(
-    height: 77,
-    padding: const EdgeInsets.symmetric(horizontal: 28),
+  Widget build(BuildContext context) => DecoratedBox(
     decoration: const BoxDecoration(
-      gradient: LinearGradient(colors: [Colors.white, Color(0xFFEEF0FF)]),
+      gradient: LinearGradient(colors: [panelColor, deepSpaceMid, panelColor]),
       border: Border(bottom: BorderSide(color: lineColor)),
     ),
-    child: Row(
-      children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: ink,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(subtitle, style: const TextStyle(color: muted, fontSize: 11)),
-          ],
+    child: CustomPaint(
+      painter: const _HeaderTraces(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        child: LayoutBuilder(
+          builder: (context, bounds) {
+            final heading = Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: ink,
+                    fontSize: 23,
+                    height: 1.12,
+                    letterSpacing: -.7,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: muted, fontSize: 12),
+                ),
+              ],
+            );
+            if (bounds.maxWidth < 630 && trailing != null) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  heading,
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: trailing!,
+                  ),
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: heading),
+                if (trailing != null) trailing!,
+              ],
+            );
+          },
         ),
-        const Spacer(),
-        if (trailing != null) trailing!,
-      ],
+      ),
     ),
   );
 }
@@ -205,7 +237,7 @@ class _ConnectionPill extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: connected ? const Color(0xFFE8F5EC) : const Color(0xFFFFF4E2),
+        color: connected ? activeSurface : warningSurface,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -220,17 +252,17 @@ class _ConnectionPill extends StatelessWidget {
             Icon(
               Icons.circle,
               size: 7,
-              color: connected ? green : const Color(0xFFD58C20),
+              color: connected ? aquaGlow : warningInk,
             ),
           const SizedBox(width: 6),
           Text(
             loading
-                ? 'Connecting…'
+                ? 'Холбогдож байна…'
                 : connected
-                ? 'Oyudent API'
-                : 'Demo mode · Connect',
+                ? 'Оюудент API'
+                : 'Туршилтын горим · Холбогдох',
             style: TextStyle(
-              color: connected ? green : const Color(0xFF956415),
+              color: connected ? aquaGlow : warningInk,
               fontSize: 10,
               fontWeight: FontWeight.w600,
             ),
@@ -248,7 +280,7 @@ class _CategoryChip extends StatelessWidget {
   const _CategoryChip({required this.label, this.active = false, this.onTap});
   @override
   Widget build(BuildContext context) => Material(
-    color: active ? green : Colors.white,
+    color: active ? green : panelColor,
     borderRadius: BorderRadius.circular(20),
     child: InkWell(
       onTap: onTap,
@@ -258,7 +290,7 @@ class _CategoryChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: active ? Colors.white : muted,
+            color: active ? deepSpace : muted,
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -279,7 +311,7 @@ class _VatChoice extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Material(
-    color: selected ? const Color(0xFFEAF2EC) : Colors.transparent,
+    color: selected ? activeSurface : Colors.transparent,
     borderRadius: BorderRadius.circular(7),
     child: InkWell(
       onTap: onTap,
@@ -350,12 +382,12 @@ void _notice(BuildContext context, String message, {bool failed = false}) {
   messenger.showSnackBar(
     SnackBar(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: failed ? const Color(0xff892d39) : deepSpaceMid,
+      backgroundColor: failed ? errorSurface : activeSurface,
       content: Row(
         children: [
           Icon(
             failed ? Icons.error_outline : Icons.check_circle_outline,
-            color: Colors.white,
+            color: failed ? errorInk : green,
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(message)),

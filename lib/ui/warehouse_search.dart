@@ -20,7 +20,7 @@ class _WarehouseSearch extends StatefulWidget {
 
 class _WarehouseSearchState extends State<_WarehouseSearch> {
   late String query = widget.query, maker = widget.maker;
-  String scope = 'Both';
+  String scope = 'Хоёулаа';
   bool loading = true;
   String? error;
   List<Map<String, dynamic>> stocks = [];
@@ -104,7 +104,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
         .toSet();
     final matches = <({int score, Map<String, dynamic> row})>[];
     for (final row in stocks) {
-      if (scope != 'Both' && scope != row['scope']) continue;
+      if (scope != 'Хоёулаа' && scope != row['scope']) continue;
       final brand = norm(row['supplier_name']).trim();
       final preferred =
           brand.isNotEmpty &&
@@ -147,7 +147,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Warehouse stock search',
+                      'Агуулахын үлдэгдэл хайх',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -163,7 +163,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
               Wrap(
                 spacing: 8,
                 children: [
-                  for (final s in ['Both', 'Centech', 'Oyudent'])
+                  for (final s in ['Хоёулаа', 'Centech', 'Oyudent'])
                     ChoiceChip(
                       label: Text(s),
                       selected: scope == s,
@@ -173,15 +173,13 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
               ),
               TextFormField(
                 initialValue: maker,
-                decoration: const InputDecoration(
-                  labelText: 'Preferred manufacturer',
-                ),
+                decoration: const InputDecoration(labelText: 'Үйлдвэрлэгч'),
                 onChanged: (s) => setState(() => maker = s),
               ),
               TextFormField(
                 initialValue: query,
                 decoration: const InputDecoration(
-                  labelText: 'Product name, reference, size or shade',
+                  labelText: 'Барааны нэр, лавлах дугаар, хэмжээ эсвэл өнгө',
                 ),
                 onChanged: (s) => setState(() => query = s),
               ),
@@ -189,24 +187,26 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                 TextButton.icon(
                   icon: const Icon(Icons.search),
                   label: const Text(
-                    'No suitable stock? Choose a catalog variant',
+                    'Тохирох үлдэгдэл алга уу? Каталогоос хувилбар сонгох',
                   ),
                   onPressed: () =>
                       Navigator.pop(context, {'browse_catalog': true}),
                 ),
               Expanded(
                 child: loading
-                    ? const _BusyBar('Loading warehouse stock…')
+                    ? const _BusyBar('Агуулахын үлдэгдлийг ачаалж байна…')
                     : error != null
                     ? Center(
                         child: TextButton(
                           onPressed: load,
-                          child: Text('$error · Retry'),
+                          child: Text('$error · Дахин оролдох'),
                         ),
                       )
                     : matches.isEmpty
                     ? const Center(
-                        child: Text('No available stock matches this search.'),
+                        child: Text(
+                          'Хайлтанд тохирох үлдэгдэлтэй бараа олдсонгүй.',
+                        ),
                       )
                     : ListView.builder(
                         itemCount: matches.length,
@@ -232,7 +232,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                                   .where((v) => v.isNotEmpty)
                                   .join(' · '),
                             ),
-                            trailing: Text('Qty ${r['quantity']}'),
+                            trailing: Text('Үлдэгдэл: ${r['quantity']}'),
                             onTap: widget.selectable
                                 ? () => Navigator.pop(context, r)
                                 : null,

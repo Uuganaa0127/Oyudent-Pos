@@ -1,5 +1,18 @@
 part of '../main.dart';
 
+const _piFieldNames = {
+  'manufacturer': 'Үйлдвэрлэгч',
+  'specification': 'Үзүүлэлт',
+  'purchase_unit': 'Худалдан авах нэгж',
+  'pieces_per_unit': 'Нэгж дэх ширхэг',
+  'reference': 'Лавлах дугаар',
+  'barcode': 'Баркод',
+  'quantity': 'Тоо хэмжээ',
+  'unit_cost': 'Нэгж өртөг',
+  'lot': 'Лот дугаар',
+  'expiry': 'Дуусах огноо',
+};
+
 class _PiReview extends StatefulWidget {
   final String token;
   final String? branch;
@@ -19,6 +32,7 @@ class _PiReviewState extends State<_PiReview> {
   );
   final paste = TextEditingController();
   PlatformFile? file;
+  bool converted = false;
   bool busy = false;
   String stage = '';
   double? progress;
@@ -68,7 +82,7 @@ class _PiReviewState extends State<_PiReview> {
   Future<List<Map<String, dynamic>>> products() async => _asMapList(
     await OyudentApi(widget.token).get(
       '/product/list?no_paginate=1',
-      stage: 'Loading the Oyudent product catalog',
+      stage: 'Оюудентийн барааны каталогийг ачаалж байна',
       limit: const Duration(minutes: 1),
     ),
   ).where((r) => id(r).isNotEmpty).toList();
@@ -76,14 +90,14 @@ class _PiReviewState extends State<_PiReview> {
     if (busy) return;
     final active = ++run;
     setState(() {
-      stage = 'Loading Oyudent products…';
+      stage = 'Оюудентийн барааг ачаалж байна…';
       progress = null;
       busy = true;
       error = null;
     });
     try {
       final refs = await importStep(
-        'Loading Oyudent products',
+        'Оюудентийн барааг ачаалж байна',
         (_) => products(),
         report: report,
         active: () => mounted,
@@ -92,10 +106,10 @@ class _PiReviewState extends State<_PiReview> {
 
       final variants = _asMapList(
         await importStep(
-          'Loading Oyudent variants',
+          'Барааны хувилбаруудыг ачаалж байна',
           (_) => OyudentApi(widget.token).get(
             '/product/variant/list?no_paginate=1',
-            stage: 'Loading Oyudent variants',
+            stage: 'Барааны хувилбаруудыг ачаалж байна',
             limit: const Duration(minutes: 1),
           ),
           report: report,
@@ -124,22 +138,25 @@ class _PiReviewState extends State<_PiReview> {
       final variantKeys = index(variants, ['sku', 'barcode']);
       final productKeys = index(refs, ['code', 'sku', 'barcode']);
       final productNames = index(refs, ['name', 'mn_name', 'english_name']);
-      final result = await KimiPi.read(
-        secret.text.trim(),
-        file,
-        paste.text.trim(),
-        active: () => mounted && active == run,
-        onStage: (label) {
-          if (active == run) report(label);
-        },
-      );
+
+      final result = converted
+          ? await compute(readInvoiceExcel, file!.bytes!)
+          : await KimiPi.read(
+              secret.text.trim(),
+              file,
+              paste.text.trim(),
+              active: () => mounted && active == run,
+              onStage: (label) {
+                if (active == run) report(label);
+              },
+            );
       final rows = _asMapList(result['items']);
       if (!mounted) return;
       final matches = <int, String>{};
       for (var i = 0; i < rows.length; i++) {
         if (i % 8 == 0) {
           report(
-            'Checking catalog · $i of ${rows.length} lines',
+            'Каталогтой тулгаж байна · ${rows.length} мөрөөс $i',
             i / rows.length,
           );
           await WidgetsBinding.instance.endOfFrame;
@@ -213,11 +230,10 @@ class _PiReviewState extends State<_PiReview> {
         pricingLines.clear();
         appliedSignature = null;
         terms = _ShipmentTerms()
-          ..currency = (result['currency'] ?? 'supplier currency')
+          ..currency = (result['currency'] ?? 'нийлүүлэгчийн валют')
               .toString()
               .toUpperCase();
-        if (terms.currency == 'MNT')
-          terms.inputs['Exchange rate · ₮ per ¥'] = '1';
+        if (terms.currency == 'MNT') terms.inputs['Валютын ханш · ₮/¥'] = '1';
         for (final r in rows) {
           pricingLines.add(
             _IncomingLine()
@@ -343,7 +359,7 @@ class _PiReviewState extends State<_PiReview> {
             ),
           );
           return AlertDialog(
-            title: const Text('Choose catalog variant'),
+            title: const Text('Каталогоос хувилбар сонгох'),
             content: SizedBox(
               width: 620,
               height: 440,
@@ -352,13 +368,11 @@ class _PiReviewState extends State<_PiReview> {
                   DropdownButtonFormField<String>(
                     initialValue: maker,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Catalog manufacturer',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Үйлдвэрлэгч'),
                     items: [
                       const DropdownMenuItem(
                         value: '',
-                        child: Text('All brands'),
+                        child: Text('Бүх үйлдвэрлэгч'),
                       ),
                       for (final b in brands)
                         DropdownMenuItem(
@@ -372,7 +386,7 @@ class _PiReviewState extends State<_PiReview> {
                     initialValue: query,
                     autofocus: true,
                     decoration: const InputDecoration(
-                      labelText: 'Search name, size, shade, barcode or SKU',
+                      labelText: 'Нэр, хэмжээ, өнгө, баркод эсвэл SKU-аар хайх',
                     ),
                     onChanged: (v) => refresh(() => query = v),
                   ),
@@ -380,7 +394,7 @@ class _PiReviewState extends State<_PiReview> {
                     child: options.isEmpty
                         ? const Center(
                             child: Text(
-                              'No variants match. Change the search or manufacturer.',
+                              'Хувилбар олдсонгүй. Хайлт эсвэл үйлдвэрлэгчээ солино уу.',
                             ),
                           )
                         : ListView.builder(
@@ -400,7 +414,7 @@ class _PiReviewState extends State<_PiReview> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
+                child: const Text('Болих'),
               ),
             ],
           );
@@ -420,7 +434,7 @@ class _PiReviewState extends State<_PiReview> {
     if (appliedSignature != null && appliedSignature != pricingSignature) {
       _notice(
         context,
-        'Pricing changed. Apply the updated prices before continuing.',
+        'Үнэ өөрчлөгдсөн байна. Үргэлжлүүлэхийн өмнө шинэ үнийг мөрүүдэд оруулна уу.',
         failed: true,
       );
       return;
@@ -461,7 +475,7 @@ class _PiReviewState extends State<_PiReview> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Import pro forma invoice')),
+    appBar: AppBar(title: const Text('Урьдчилсан нэхэмжлэх импортлох')),
     body: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 900),
@@ -477,7 +491,9 @@ class _PiReviewState extends State<_PiReview> {
                 stage: stage,
                 progress: progress,
                 retry: error != null,
-                onFile: (f) => setState(() {
+                converted: converted,
+                onFile: (f, ready) => setState(() {
+                  converted = ready;
                   file = f;
                   error = null;
                 }),
@@ -486,17 +502,17 @@ class _PiReviewState extends State<_PiReview> {
               ),
             ] else ...[
               Text(
-                'Review PI ${draft!['invoice_number'] ?? ''}',
+                'Нэхэмжлэх шалгах · ${draft!['invoice_number'] ?? ''}',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Text(
-                '${items.length} lines · Currency: ${draft!['currency'] ?? "unknown"}',
+                '${items.length} мөр · Валют: ${draft!['currency'] ?? "тодорхойгүй"}',
               ),
               const SizedBox(height: 12),
-              Text('$variantCount of ${items.length} variants selected'),
+              Text('${items.length} мөрөөс $variantCount хувилбар сонгосон'),
               LinearProgressIndicator(
                 value: items.isEmpty ? 0 : variantCount / items.length,
-                semanticsLabel: 'Catalog product selections',
+                semanticsLabel: 'Каталогоос сонгосон бараа',
               ),
               const SizedBox(height: 12),
               if (!priceStep) ...[
@@ -526,7 +542,7 @@ class _PiReviewState extends State<_PiReview> {
                                 'expiry',
                               ])
                                 if (items[i][k] != null)
-                                  '${k.replaceAll("_", " ")}: ${items[i][k]}',
+                                  '${_piFieldNames[k] ?? k}: ${items[i][k]}',
                             ].join(' · '),
                           ),
                           Align(
@@ -534,7 +550,7 @@ class _PiReviewState extends State<_PiReview> {
                             child: TextButton.icon(
                               icon: const Icon(Icons.warehouse_outlined),
                               label: const Text(
-                                'Find similar warehouse variants',
+                                'Агуулахаас төстэй хувилбар хайх',
                               ),
                               onPressed: () async {
                                 final row = items[i];
@@ -580,7 +596,7 @@ class _PiReviewState extends State<_PiReview> {
                           OutlinedButton.icon(
                             icon: const Icon(Icons.search),
                             label: const Text(
-                              'Choose variant from full catalog',
+                              'Бүрэн каталогоос хувилбар сонгох',
                             ),
                             onPressed: () => chooseVariant(i),
                           ),
@@ -593,7 +609,7 @@ class _PiReviewState extends State<_PiReview> {
                                 icon: const Icon(Icons.add),
                                 onPressed: () => create(i),
                                 label: const Text(
-                                  'Review and create missing product',
+                                  'Бүртгэлгүй барааг шалгаж нэмэх',
                                 ),
                               ),
                             ),
@@ -611,12 +627,12 @@ class _PiReviewState extends State<_PiReview> {
                           }
                         })
                       : null,
-                  child: const Text('Complete variants and choose prices'),
+                  child: const Text('Хувилбараа баталгаажуулж үнэ сонгох'),
                 ),
               ] else ...[
                 TextButton(
                   onPressed: () => setState(() => priceStep = false),
-                  child: const Text('Back to variants'),
+                  child: const Text('Хувилбар сонголт руу буцах'),
                 ),
                 _ShipmentPricing(
                   expanded: true,
@@ -628,7 +644,7 @@ class _PiReviewState extends State<_PiReview> {
                 ),
                 FilledButton(
                   onPressed: appliedSignature == null ? null : review,
-                  child: const Text('Review priced Orlogo draft'),
+                  child: const Text('Үнэ тооцсон орлогын баримтыг шалгах'),
                 ),
               ],
               TextButton(
@@ -636,7 +652,7 @@ class _PiReviewState extends State<_PiReview> {
                   draft = null;
                   error = null;
                 }),
-                child: const Text('Choose another invoice'),
+                child: const Text('Өөр нэхэмжлэх сонгох'),
               ),
             ],
             if (error != null)

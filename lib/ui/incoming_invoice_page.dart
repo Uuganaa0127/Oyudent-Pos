@@ -46,13 +46,13 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
   Widget build(BuildContext context) => Column(
     children: [
       _TopBar(
-        title: 'Orlogo · Incoming stock',
-        subtitle: 'Create incoming invoices and add warehouse quantities',
+        title: 'Орлогын баримт',
+        subtitle: 'Агуулахад бараа хүлээн авч, орлогын баримт бүртгэнэ.',
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              tooltip: 'Search both warehouses',
+              tooltip: 'Хоёр агуулахаас хайх',
               icon: const Icon(Icons.warehouse_outlined),
               onPressed: widget.apiToken.isEmpty
                   ? null
@@ -63,7 +63,7 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.document_scanner_outlined),
-              label: const Text('Import PI'),
+              label: const Text('PI импортлох'),
               onPressed: widget.apiToken.isEmpty
                   ? null
                   : () async {
@@ -85,7 +85,7 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
             ),
             IconButton(
               onPressed: loading ? null : _load,
-              tooltip: 'Refresh',
+              tooltip: 'Шинэчлэх',
               icon: const Icon(Icons.refresh),
             ),
             const SizedBox(width: 8),
@@ -114,23 +114,23 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
       ),
       Expanded(
         child: loading
-            ? const _BusyBar('Loading incoming invoices…')
+            ? const _BusyBar('Орлогын баримтыг ачаалж байна…')
             : error != null
             ? Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Could not load incoming invoices: $error'),
+                    Text('Орлогын баримтыг ачаалж чадсангүй: $error'),
                     const SizedBox(height: 8),
                     FilledButton(
                       onPressed: _load,
-                      child: const Text('Try again'),
+                      child: const Text('Дахин оролдох'),
                     ),
                   ],
                 ),
               )
             : invoices.isEmpty
-            ? const Center(child: Text('No incoming invoices yet.'))
+            ? const Center(child: Text('Орлогын баримт бүртгэгдээгүй байна.'))
             : ListView.separated(
                 padding: const EdgeInsets.all(24),
                 itemCount: invoices.length,
@@ -140,13 +140,14 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
                   return Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: panelColor,
+                      border: Border.all(color: lineColor),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       children: [
                         IconButton(
-                          tooltip: 'Edit incoming invoice',
+                          tooltip: 'Орлогын баримт засах',
                           icon: const Icon(Icons.edit_outlined),
                           onPressed: invoice['id'] == null
                               ? null
@@ -173,7 +174,7 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                (invoice['invoice_number'] ?? 'Invoice')
+                                (invoice['invoice_number'] ?? 'Нэхэмжлэх')
                                     .toString(),
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w700,
@@ -182,7 +183,7 @@ class _IncomingInvoicesPageState extends State<IncomingInvoicesPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${invoice['branch_name'] ?? 'Branch'} · ${invoice['invoice_date'] ?? ''}',
+                                '${invoice['branch_name'] ?? 'Салбар'} · ${invoice['invoice_date'] ?? ''}',
                                 style: const TextStyle(
                                   color: muted,
                                   fontSize: 11,
@@ -287,7 +288,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
           : null;
       final pi = widget.pi;
       if (pi != null) {
-        shipmentTerms.currency = (pi['currency'] ?? 'supplier currency')
+        shipmentTerms.currency = (pi['currency'] ?? 'нийлүүлэгчийн валют')
             .toString()
             .toUpperCase();
         final terms = pi['pricing_terms'];
@@ -469,14 +470,13 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
 
   Future<void> _save() async {
     if (branchId == null || branchId!.isEmpty) {
-      setState(() => error = 'Select a branch.');
+      setState(() => error = 'Салбар сонгоно уу.');
       return;
     }
     if (widget.pi != null &&
         lines.any((line) => double.tryParse(line.unitCost.text) == null)) {
       setState(
-        () => error =
-            'Enter or confirm the unit cost in ₮ for every imported line.',
+        () => error = 'Импортолсон мөр бүрийн нэгж өртгийг төгрөгөөр оруулж баталгаажуулна уу.',
       );
       return;
     }
@@ -488,7 +488,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
           (num.tryParse(x.quantity.text) ?? 0) <= 0,
     )) {
       setState(
-        () => error = 'Choose a product, variant, warehouse, and positive quantity for every row.',
+        () => error = 'Мөр бүрд бараа, хувилбар, агуулах сонгож, тэгээс их тоо хэмжээ оруулна уу.',
       );
       return;
     }
@@ -506,13 +506,13 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
         'list': _invoiceItems(),
       });
       if (mounted) {
-        _notice(context, 'Incoming invoice saved.');
+        _notice(context, 'Орлогын баримт хадгалагдлаа.');
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         setState(() => error = e.toString());
-        _notice(context, 'Could not finish saving: $e', failed: true);
+        _notice(context, 'Хадгалж чадсангүй: $e', failed: true);
       }
     } finally {
       if (mounted) setState(() => saving = false);
@@ -525,7 +525,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
       width: 950,
       height: 750,
       child: loading
-          ? const _BusyBar('Loading incoming invoices…')
+          ? const _BusyBar('Орлогын баримтыг ачаалж байна…')
           : Column(
               children: [
                 Padding(
@@ -581,7 +581,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                               },
                               icon: const Icon(Icons.calendar_today),
                               label: Text(
-                                'Invoice date · ${invoiceDate.year}-${invoiceDate.month.toString().padLeft(2, '0')}-${invoiceDate.day.toString().padLeft(2, '0')}',
+                                'Баримтын огноо · ${invoiceDate.year}-${invoiceDate.month.toString().padLeft(2, '0')}-${invoiceDate.day.toString().padLeft(2, '0')}',
                               ),
                             ),
                           ),
@@ -590,7 +590,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                             child: _ReferenceDropdown(
                               initialValue: branchId,
                               decoration: const InputDecoration(
-                                labelText: 'Branch',
+                                labelText: 'Салбар',
                               ),
                               items: branches
                                   .map(
@@ -608,7 +608,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                             child: TextField(
                               controller: invoiceNumber,
                               decoration: const InputDecoration(
-                                labelText: 'Supplier invoice number (optional)',
+                                labelText: 'Нийлүүлэгчийн нэхэмжлэхийн дугаар (заавал биш)',
                               ),
                             ),
                           ),
@@ -619,7 +619,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                         final index = entry.key;
                         final line = entry.value;
                         return Card(
-                          color: const Color(0xfff7f8f6),
+                          color: inputSurface,
                           child: Padding(
                             padding: const EdgeInsets.all(14),
                             child: Column(
@@ -628,14 +628,14 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        'Product line ${index + 1}',
+                                        'Барааны мөр ${index + 1}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),
                                     IconButton(
-                                      tooltip: 'Edit product and variants',
+                                      tooltip: 'Бараа, хувилбар засах',
                                       icon: const Icon(Icons.edit_outlined),
                                       onPressed:
                                           line.productId == null || saving
@@ -704,7 +704,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                       child: _ReferenceDropdown(
                                         initialValue: line.productId,
                                         decoration: const InputDecoration(
-                                          labelText: 'Product',
+                                          labelText: 'Бараа',
                                         ),
                                         items: products
                                             .map(
@@ -735,7 +735,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                       child: _ReferenceDropdown(
                                         initialValue: line.variantId,
                                         decoration: const InputDecoration(
-                                          labelText: 'Variant / barcode',
+                                          labelText: 'Хувилбар / баркод',
                                         ),
                                         items: line.variants
                                             .map(
@@ -771,7 +771,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                       child: _ReferenceDropdown(
                                         initialValue: line.warehouseId,
                                         decoration: const InputDecoration(
-                                          labelText: 'Warehouse',
+                                          labelText: 'Агуулах',
                                         ),
                                         items: warehouses
                                             .map(
@@ -795,7 +795,8 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                 TextField(
                                   controller: line.lotNumber,
                                   decoration: const InputDecoration(
-                                    labelText: 'Warehouse note / lot number',
+                                    labelText:
+                                        'Агуулахын тэмдэглэл / лот дугаар',
                                   ),
                                 ),
                                 Row(
@@ -805,7 +806,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                         controller: line.quantity,
                                         keyboardType: TextInputType.number,
                                         decoration: const InputDecoration(
-                                          labelText: 'Quantity',
+                                          labelText: 'Тоо хэмжээ',
                                         ),
                                         onChanged: (_) => setState(() {}),
                                       ),
@@ -816,7 +817,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                         controller: line.unitCost,
                                         keyboardType: TextInputType.number,
                                         decoration: const InputDecoration(
-                                          labelText: 'Unit cost',
+                                          labelText: 'Нэгж өртөг',
                                         ),
                                       ),
                                     ),
@@ -826,7 +827,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                         controller: line.netPrice,
                                         keyboardType: TextInputType.number,
                                         decoration: const InputDecoration(
-                                          labelText: 'Price without VAT',
+                                          labelText: 'НӨАТ-гүй үнэ',
                                         ),
                                       ),
                                     ),
@@ -836,7 +837,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                         controller: line.grossPrice,
                                         keyboardType: TextInputType.number,
                                         decoration: const InputDecoration(
-                                          labelText: 'Price with VAT',
+                                          labelText: 'НӨАТ-тай үнэ',
                                         ),
                                         onChanged: (_) => setState(() {}),
                                       ),
@@ -859,7 +860,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                       },
                                       child: Text(
                                         line.expirationDate == null
-                                            ? 'Expiry date'
+                                            ? 'Дуусах огноо'
                                             : '${line.expirationDate!.year}-${line.expirationDate!.month}-${line.expirationDate!.day}',
                                       ),
                                     ),
@@ -876,11 +877,11 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                             onPressed: () =>
                                 setState(() => lines.add(_IncomingLine())),
                             icon: const Icon(Icons.add),
-                            label: const Text('Add line'),
+                            label: const Text('Мөр нэмэх'),
                           ),
                           const Spacer(),
                           Text(
-                            'Gross total: ₮${_money(_grossTotal)}',
+                            'Нийт дүн: ₮${_money(_grossTotal)}',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ],
@@ -906,14 +907,14 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                 }
                               },
                         icon: const Icon(Icons.add_box_outlined),
-                        label: const Text('Add new product and variant'),
+                        label: const Text('Шинэ бараа, хувилбар нэмэх'),
                       ),
                       if (error != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             error!,
-                            style: const TextStyle(color: Colors.red),
+                            style: const TextStyle(color: errorInk),
                           ),
                         ),
                     ],
@@ -929,7 +930,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                         onPressed: saving
                             ? null
                             : () => Navigator.pop(context, false),
-                        child: const Text('Close'),
+                        child: const Text('Хаах'),
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
@@ -944,7 +945,7 @@ class _IncomingInvoiceDialogState extends State<_IncomingInvoiceDialog> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Save incoming invoice'),
+                            : const Text('Орлогын баримт хадгалах'),
                       ),
                     ],
                   ),

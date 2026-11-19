@@ -11,10 +11,12 @@ class _ProductCard extends StatelessWidget {
   });
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(18),
-    elevation: 2,
-    shadowColor: const Color(0x180A1424),
+    color: panelColor,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+      side: const BorderSide(color: lineColor),
+    ),
+    clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(18),
@@ -61,14 +63,14 @@ class _ProductCard extends StatelessWidget {
                     ].where((value) => value.trim().isNotEmpty).join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: muted, fontSize: 8),
+              style: const TextStyle(color: muted, fontSize: 10),
             ),
             const SizedBox(height: 3),
             Text(
-              'Stock: $stock left',
+              'Үлдэгдэл: $stock',
               style: TextStyle(
-                color: stock <= 5 ? const Color(0xFFB45309) : muted,
-                fontSize: 8,
+                color: stock <= 5 ? warningInk : muted,
+                fontSize: 10,
                 fontWeight: stock <= 5 ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
@@ -84,11 +86,11 @@ class _ProductCard extends StatelessWidget {
                 ),
                 Text(
                   stock <= 0 && product.apiStock == null
-                      ? 'No branch stock'
+                      ? 'Энэ салбарт үлдэгдэлгүй'
                       : '₮${_money(product.price.toDouble())}',
                   style: TextStyle(
                     color: stock <= 0 && product.apiStock == null
-                        ? const Color(0xFFB45309)
+                        ? warningInk
                         : green,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -220,7 +222,7 @@ class _CartLine extends StatelessWidget {
             initialValue: note,
             onChanged: onNoteChanged,
             decoration: const InputDecoration(
-              hintText: 'Line note',
+              hintText: 'Мөрийн тэмдэглэл',
               prefixIcon: Icon(Icons.notes_outlined, size: 15),
               contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             ),
@@ -238,13 +240,13 @@ class _InventoryHeader extends StatelessWidget {
     padding: EdgeInsets.symmetric(horizontal: 18, vertical: 13),
     child: Row(
       children: [
-        Expanded(flex: 4, child: Text('PRODUCT', style: _tableHead)),
-        Expanded(flex: 2, child: Text('REFERENCE', style: _tableHead)),
-        Expanded(flex: 2, child: Text('LOT NUMBER', style: _tableHead)),
+        Expanded(flex: 4, child: Text('БАРАА', style: _tableHead)),
+        Expanded(flex: 2, child: Text('ЛАВЛАХ ДУГААР', style: _tableHead)),
+        Expanded(flex: 2, child: Text('ЛОТ ДУГААР', style: _tableHead)),
         SizedBox(
           width: 90,
           child: Text(
-            'QUANTITY LEFT',
+            'ҮЛДЭГДЭЛ',
             textAlign: TextAlign.right,
             style: _tableHead,
           ),
@@ -314,7 +316,7 @@ class _InventoryRow extends StatelessWidget {
             '$quantity',
             textAlign: TextAlign.right,
             style: TextStyle(
-              color: quantity <= 5 ? const Color(0xFFB45309) : ink,
+              color: quantity <= 5 ? warningInk : ink,
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -340,7 +342,7 @@ class _MetricCard extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(18),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: panelColor,
       borderRadius: BorderRadius.circular(14),
     ),
     child: Column(

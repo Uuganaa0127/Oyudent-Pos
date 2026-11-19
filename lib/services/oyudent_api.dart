@@ -21,7 +21,7 @@ class OyudentApi {
 
   Future<Map<String, dynamic>> get(
     String path, {
-    String stage = 'Loading Oyudent data',
+    String stage = 'Оюудентийн мэдээллийг ачаалж байна',
     Duration limit = const Duration(seconds: 30),
   }) async {
     final response = await timedHttp(
@@ -50,7 +50,7 @@ class OyudentApi {
     final response = await get('/order/detail/${Uri.encodeComponent(id)}');
     final data = response['data'];
     if (data is! Map<String, dynamic> || data['items'] is! List) {
-      throw const FormatException('Order details are unavailable.');
+      throw const FormatException('Захиалгын мэдээлэл авах боломжгүй байна.');
     }
     return data;
   }
@@ -69,8 +69,9 @@ class OyudentApi {
     required PlatformFile image,
     String fieldName = 'image',
   }) async {
-    if (token.isEmpty) throw Exception('Sign in before uploading images.');
-    if (image.bytes == null) throw Exception('Could not read ${image.name}.');
+    if (token.isEmpty) throw Exception('Зураг оруулахын өмнө нэвтэрнэ үү.');
+    if (image.bytes == null)
+      throw Exception('${image.name} файлыг уншиж чадсангүй.');
     final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))
       ..headers['Authorization'] = 'Bearer $token'
       ..headers['Accept'] = 'application/json'
@@ -105,7 +106,9 @@ class OyudentApi {
       final errors = body['errors'];
       final message = errors is List && errors.isNotEmpty
           ? errors.first.toString()
-          : (body['message'] ?? body['error'] ?? 'API request failed ($status)')
+          : (body['message'] ??
+                    body['error'] ??
+                    'Системийн хүсэлт амжилтгүй ($status)')
                 .toString();
       throw Exception(message);
     }

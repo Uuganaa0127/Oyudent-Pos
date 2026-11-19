@@ -4,10 +4,10 @@ class _DeliveryProgress extends StatelessWidget {
   const _DeliveryProgress(this.status);
   final String status;
   static const stages = [
-    'Pending',
-    'Preparing',
-    'Out for delivery',
-    'Delivered',
+    'Хүлээгдэж буй',
+    'Бэлтгэж байна',
+    'Хүргэлтэд гарсан',
+    'Хүргэгдсэн',
   ];
   static const codes = [
     'ORDER_STATUS_PENDING',
@@ -21,24 +21,65 @@ class _DeliveryProgress extends StatelessWidget {
     final stage = codes.indexOf(status);
     if (stage < 0) {
       final message = switch (status) {
-        'ORDER_STATUS_RETURNED' => 'Returned · Review and correct the order before sending it back to preparation.',
+        'ORDER_STATUS_RETURNED' =>
+          'Буцаагдсан · Захиалгаа шалгаж засаад дахин бэлтгэлд шилжүүлнэ үү.',
         'ORDER_STATUS_FAILED_DELIVERY' =>
-          'Delivery failed · Retry delivery or cancel the order.',
-        'ORDER_STATUS_CANCELLED' => 'Cancelled · Delivery stopped.',
-        _ => 'Delivery status unavailable',
+          'Хүргэлт амжилтгүй · Дахин хүргэх эсвэл захиалгыг цуцална уу.',
+        'ORDER_STATUS_CANCELLED' => 'Цуцлагдсан · Хүргэлт зогссон.',
+        _ => 'Хүргэлтийн төлөв тодорхойгүй',
       };
-      return Text(message, style: const TextStyle(fontWeight: FontWeight.w600));
+      return Row(
+        children: [
+          Icon(
+            status == 'ORDER_STATUS_RETURNED'
+                ? Icons.assignment_return_outlined
+                : Icons.info_outline,
+            color: warningInk,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: warningInk,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Step ${stage + 1} of 4 · ${stages[stage]}${stage < 3 ? '  →  Next: ${stages[stage + 1]}' : ''}',
+          '4 үе шатны ${stage + 1} · ${stages[stage]}${stage < 3 ? '  →  Дараагийн шат: ${stages[stage + 1]}' : ''}',
         ),
         const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: (stage + 1) / 4,
-          semanticsLabel: 'Delivery stage',
+        Semantics(
+          label: 'Хүргэлтийн 4 үе шатны ${stage + 1}',
+          child: Row(
+            children: List.generate(
+              stages.length,
+              (i) => Expanded(
+                child: Container(
+                  height: 5,
+                  margin: EdgeInsets.only(
+                    right: i == stages.length - 1 ? 0 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: i < stage
+                        ? aquaGlow
+                        : i == stage
+                        ? green
+                        : lineColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -100,7 +141,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
       if (fresh['status_code'] != status ||
           jsonEncode(fresh) != jsonEncode(order)) {
         throw Exception(
-          'This order changed. Close and reopen it to review the latest version.',
+          'Захиалга өөрчлөгдсөн байна. Хаагаад дахин нээж шинэ мэдээллийг шалгана уу.',
         );
       }
       final items = <Map<String, dynamic>>[];
@@ -166,13 +207,13 @@ class _OrderDetailsState extends State<_OrderDetails> {
       initialValue: price ? prices[i] : quantities[i],
       enabled: !saving,
       decoration: InputDecoration(
-        labelText: price ? 'Unit price (₮)' : 'Quantity',
+        labelText: price ? 'Нэгж үнэ (₮)' : 'Тоо хэмжээ',
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       validator: (text) {
         final n = double.tryParse(text ?? '');
         if (n == null || !n.isFinite || n < 0 || (!price && n == 0))
-          return 'Enter a valid amount';
+          return 'Зөв тоон утга оруулна уу';
         return null;
       },
       onChanged: (v) => setState(() => (price ? prices : quantities)[i] = v),
@@ -182,7 +223,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(
-      '${editing ? 'Edit returned order' : 'Order details'} · ${order['invoice_number'] ?? widget.id}',
+      '${editing ? 'Буцаагдсан захиалгыг засах' : 'Захиалгын дэлгэрэнгүй'} · ${order['invoice_number'] ?? widget.id}',
     ),
     content: SizedBox(
       width: 640,
@@ -202,13 +243,13 @@ class _OrderDetailsState extends State<_OrderDetails> {
                 ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
               ),
               Text(
-                'Invoice ${_displayApiDate(order['invoice_date'])}   Due ${_displayApiDate(order['due_date'])}',
+                'Баримтын огноо: ${_displayApiDate(order['invoice_date'])}   Төлөх огноо: ${_displayApiDate(order['due_date'])}',
               ),
-              if (lines.isEmpty) const Text('No order items.'),
+              if (lines.isEmpty) const Text('Захиалгад бараа байхгүй.'),
               for (var i = 0; i < lines.length; i++) ...[
                 const Divider(height: 24),
                 Text(
-                  (lines[i]['product_name'] ?? lines[i]['name'] ?? 'Product')
+                  (lines[i]['product_name'] ?? lines[i]['name'] ?? 'Бараа')
                       .toString(),
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -217,9 +258,10 @@ class _OrderDetailsState extends State<_OrderDetails> {
                     lines[i]['variant_name'],
                     lines[i]['variant_code'],
                     lines[i]['warehouse_name'],
-                    if (lines[i]['lot_no'] != null) 'Lot ${lines[i]['lot_no']}',
+                    if (lines[i]['lot_no'] != null)
+                      'Лот: ${lines[i]['lot_no']}',
                     if (lines[i]['expiration_date'] != null)
-                      'Expires ${_displayApiDate(lines[i]['expiration_date'])}',
+                      'Дуусах: ${_displayApiDate(lines[i]['expiration_date'])}',
                   ].whereType<String>().where((s) => s.isNotEmpty).join(' · '),
                 ),
                 if (editing)
@@ -241,14 +283,16 @@ class _OrderDetailsState extends State<_OrderDetails> {
                 TextFormField(
                   initialValue: note,
                   enabled: !saving,
-                  decoration: const InputDecoration(labelText: 'Order note'),
+                  decoration: const InputDecoration(
+                    labelText: 'Захиалгын тэмдэглэл',
+                  ),
                   onChanged: (v) => note = v,
                 )
               else if (note.isNotEmpty)
                 Text(note),
               const SizedBox(height: 12),
               Text(
-                'Order total  ${_orderMoney(total)}',
+                'Захиалгын нийт дүн  ${_orderMoney(total)}',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               if (error != null)
@@ -265,7 +309,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
     actions: [
       TextButton(
         onPressed: saving ? null : () => Navigator.pop(context),
-        child: Text(editing ? 'Cancel' : 'Close'),
+        child: Text(editing ? 'Болих' : 'Хаах'),
       ),
       if (status == 'ORDER_STATUS_RETURNED')
         FilledButton(
@@ -274,7 +318,9 @@ class _OrderDetailsState extends State<_OrderDetails> {
               : editing
               ? save
               : () => setState(() => editing = true),
-          child: Text(editing ? 'Save changes' : 'Edit returned order'),
+          child: Text(
+            editing ? 'Өөрчлөлт хадгалах' : 'Буцаагдсан захиалгыг засах',
+          ),
         ),
     ],
   );

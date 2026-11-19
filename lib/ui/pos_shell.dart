@@ -6,7 +6,7 @@ class PosShell extends StatefulWidget {
   const PosShell({
     super.key,
     this.initialToken = '',
-    this.userName = 'Oyudent user',
+    this.userName = 'Оюудентийн хэрэглэгч',
   });
   @override
   State<PosShell> createState() => _PosShellState();
@@ -17,7 +17,7 @@ class _PosShellState extends State<PosShell> {
   OyudentApi get _api => OyudentApi(apiToken);
   int page = 0;
   String selectedCompany = 'Oyudent';
-  String selectedCategory = 'All items';
+  String selectedCategory = 'Бүх бараа';
   String searchQuery = '';
   bool withVat = true;
   bool apiBusy = false;
@@ -59,10 +59,10 @@ class _PosShellState extends State<PosShell> {
   final demoProducts = const [
     Product(
       'Americano',
-      'Coffee · Hot',
+      'Кофе · Халуун',
       6500,
       '☕',
-      Color(0xFFF5E9DF),
+      warningSurface,
       reference: 'REF-10001',
       lotNumber: 'LOT-2611-01',
       barcode: '10001001',
@@ -71,10 +71,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Cappuccino',
-      'Coffee · Hot',
+      'Кофе · Халуун',
       8500,
       '🥛',
-      Color(0xFFE9EFE4),
+      deepSpaceMid,
       reference: 'REF-10002',
       lotNumber: 'LOT-2611-02',
       barcode: '10001002',
@@ -83,10 +83,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Iced latte',
-      'Coffee · Cold',
+      'Кофе · Хүйтэн',
       9500,
       '🧋',
-      Color(0xFFE6EDF4),
+      deepSpaceMid,
       reference: 'REF-10003',
       lotNumber: 'LOT-2611-03',
       barcode: '10001003',
@@ -95,10 +95,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Blueberry muffin',
-      'Bakery',
+      'Нарийн боов',
       7000,
       '🫐',
-      Color(0xFFF2E9F0),
+      errorSurface,
       reference: 'REF-20001',
       lotNumber: 'LOT-2611-04',
       barcode: '20001001',
@@ -107,10 +107,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Matcha latte',
-      'Tea · Cold',
+      'Цай · Хүйтэн',
       11000,
       '🍵',
-      Color(0xFFE7F0E1),
+      activeSurface,
       reference: 'REF-30001',
       lotNumber: 'LOT-2611-05',
       barcode: '30001001',
@@ -119,10 +119,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Butter croissant',
-      'Bakery',
+      'Нарийн боов',
       7500,
       '🥐',
-      Color(0xFFF7EFDE),
+      warningSurface,
       reference: 'REF-20002',
       lotNumber: 'LOT-2611-06',
       barcode: '20001002',
@@ -131,10 +131,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Flat white',
-      'Coffee · Hot',
+      'Кофе · Халуун',
       8000,
       '☕',
-      Color(0xFFF2E7DD),
+      deepSpaceMid,
       reference: 'REF-10004',
       lotNumber: 'LOT-2611-07',
       barcode: '10001004',
@@ -143,10 +143,10 @@ class _PosShellState extends State<PosShell> {
     ),
     Product(
       'Lemon tea',
-      'Tea · Hot',
+      'Цай · Халуун',
       6000,
       '🍋',
-      Color(0xFFF3F1DB),
+      activeSurface,
       reference: 'REF-30002',
       lotNumber: 'LOT-2611-08',
       barcode: '30001002',
@@ -158,10 +158,10 @@ class _PosShellState extends State<PosShell> {
   List<MapEntry<String, String>> get categoryOptions {
     if (apiProducts == null) {
       return const [
-        MapEntry('All items', 'All items'),
-        MapEntry('Coffee', 'Coffee'),
-        MapEntry('Tea', 'Tea'),
-        MapEntry('Bakery', 'Bakery'),
+        MapEntry('Бүх бараа', 'Бүх бараа'),
+        MapEntry('Кофе', 'Кофе'),
+        MapEntry('Цай', 'Цай'),
+        MapEntry('Нарийн боов', 'Нарийн боов'),
       ];
     }
     final options = <MapEntry<String, String>>[];
@@ -193,7 +193,7 @@ class _PosShellState extends State<PosShell> {
         }
       }
     }
-    return [const MapEntry('All items', 'All items'), ...options];
+    return [const MapEntry('Бүх бараа', 'Бүх бараа'), ...options];
   }
 
   double get total =>
@@ -206,8 +206,8 @@ class _PosShellState extends State<PosShell> {
     );
     if (branch != null) return _refName(branch);
     return selectedCompany == 'Centech'
-        ? 'Centech Central Warehouse'
-        : 'Oyudent Main Warehouse';
+        ? 'Сентекийн төв агуулах'
+        : 'Оюудентийн үндсэн агуулах';
   }
 
   String get currentBusinessName {
@@ -255,7 +255,7 @@ class _PosShellState extends State<PosShell> {
     final token = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Connect to Oyudent'),
+        title: const Text('Оюудентийн системд холбогдох'),
         content: SizedBox(
           width: 410,
           child: Column(
@@ -263,21 +263,21 @@ class _PosShellState extends State<PosShell> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Paste an Oyudent API Bearer token to load branches, companies, warehouse stock, and prices.',
+                'Салбар, байгууллага, үлдэгдэл, үнийг ачаалахын тулд хандалтын токеноо оруулна уу.',
               ),
               const SizedBox(height: 14),
               TextField(
                 controller: controller,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'API access token',
-                  hintText: 'Bearer token',
+                  labelText: 'API хандалтын токен',
+                  hintText: 'Хандалтын токен',
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
               const SizedBox(height: 8),
               const Text(
-                'The token is kept only in memory while this app is open.',
+                'Токен зөвхөн апп нээлттэй үед санах ойд байна.',
                 style: TextStyle(color: muted, fontSize: 11),
               ),
             ],
@@ -286,12 +286,12 @@ class _PosShellState extends State<PosShell> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Болих'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             style: FilledButton.styleFrom(backgroundColor: green),
-            child: const Text('Connect'),
+            child: const Text('Холбогдох'),
           ),
         ],
       ),
@@ -332,14 +332,16 @@ class _PosShellState extends State<PosShell> {
       selectedBranchId ??= apiBranches.isEmpty
           ? null
           : apiBranches.first['id']?.toString();
-      selectedCategory = 'All items';
+      selectedCategory = 'Бүх бараа';
       if (selectedBranchId != null) await _loadApiStock();
       if (mounted) setState(() {});
     } catch (error) {
       if (mounted) {
         setState(() => apiError = '$error');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not connect to Oyudent: $error')),
+          SnackBar(
+            content: Text('Оюудентийн системд холбогдож чадсангүй: $error'),
+          ),
         );
       }
     } finally {
@@ -348,14 +350,14 @@ class _PosShellState extends State<PosShell> {
   }
 
   Widget _profileMenu({required Widget child}) => PopupMenuButton<String>(
-    tooltip: 'Profile',
+    tooltip: 'Хэрэглэгчийн мэдээлэл',
     onSelected: (value) {
       if (value == 'sign_out') _signOut();
     },
     itemBuilder: (context) => [
       PopupMenuItem<String>(
         enabled: false,
-        child: Text('Signed in as $userName'),
+        child: Text('Нэвтэрсэн хэрэглэгч: $userName'),
       ),
       const PopupMenuDivider(),
       const PopupMenuItem<String>(
@@ -364,7 +366,7 @@ class _PosShellState extends State<PosShell> {
           children: [
             Icon(Icons.logout, size: 18),
             SizedBox(width: 10),
-            Text('Sign out'),
+            Text('Гарах'),
           ],
         ),
       ),
@@ -466,18 +468,18 @@ class _PosShellState extends State<PosShell> {
       final clearCurrentOrder = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Switch branch?'),
+          title: const Text('Салбар солих уу?'),
           content: const Text(
-            'Changing branch clears the current order so items from different warehouses are not mixed.',
+            'Өөр агуулахын бараа холилдохоос сэргийлж одоогийн захиалгыг цэвэрлэнэ.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Keep current order'),
+              child: const Text('Захиалгаа үргэлжлүүлэх'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Switch branch'),
+              child: const Text('Салбар солих'),
             ),
           ],
         ),
@@ -501,7 +503,9 @@ class _PosShellState extends State<PosShell> {
           apiError = '$error';
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not load this branch: $error')),
+          SnackBar(
+            content: Text('Салбарын мэдээллийг ачаалж чадсангүй: $error'),
+          ),
         );
       }
     }
@@ -537,13 +541,15 @@ class _PosShellState extends State<PosShell> {
     required bool includeVat,
   }) async {
     if (selectedBranchId == null || selectedApiCompanyId == null) {
-      throw Exception('Select a branch and company before saving the order.');
+      throw Exception(
+        'Захиалгаа хадгалахаас өмнө салбар, байгууллага сонгоно уу.',
+      );
     }
     final items = cart.entries.map((entry) {
       final product = products[entry.key];
       final stock = product.apiStock;
       if (stock == null)
-        throw Exception('Refresh live stock before placing this order.');
+        throw Exception('Захиалга өгөхийн өмнө үлдэгдлийг шинэчилнэ үү.');
       final netPrice = product.price.toDouble();
       final lineVat = includeVat ? netPrice * .1 * entry.value : 0.0;
       return {
@@ -595,7 +601,9 @@ class _PosShellState extends State<PosShell> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Invoice saved; stock refresh failed: $error'),
+            content: Text(
+              'Баримт хадгалагдсан боловч үлдэгдлийг шинэчилж чадсангүй: $error',
+            ),
           ),
         );
       }
@@ -635,7 +643,7 @@ class _PosShellState extends State<PosShell> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Add new company'),
+          title: const Text('Байгууллага нэмэх'),
           content: SizedBox(
             width: 430,
             child: SingleChildScrollView(
@@ -645,46 +653,44 @@ class _PosShellState extends State<PosShell> {
                   TextField(
                     controller: registerController,
                     decoration: const InputDecoration(
-                      labelText: 'Register number',
+                      labelText: 'Регистрийн дугаар',
                     ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: nameController,
                     decoration: const InputDecoration(
-                      labelText: 'Company name *',
+                      labelText: 'Байгууллагын нэр *',
                     ),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: addressController,
-                    decoration: const InputDecoration(labelText: 'Address'),
+                    decoration: const InputDecoration(labelText: 'Хаяг'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: phoneController,
-                    decoration: const InputDecoration(
-                      labelText: 'Contact phone',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Утас'),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: emailController,
                     decoration: const InputDecoration(
-                      labelText: 'Email (optional)',
+                      labelText: 'Цахим шуудан (заавал биш)',
                     ),
                   ),
                   const SizedBox(height: 8),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Individual customer'),
+                    title: const Text('Хувь хүн'),
                     value: isPerson,
                     onChanged: (value) =>
                         setDialogState(() => isPerson = value ?? false),
                   ),
                   CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Allow credit sales'),
+                    title: const Text('Зээлээр борлуулахыг зөвшөөрөх'),
                     value: allowLoan,
                     onChanged: (value) =>
                         setDialogState(() => allowLoan = value ?? false),
@@ -696,13 +702,15 @@ class _PosShellState extends State<PosShell> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: const Text('Болих'),
             ),
             FilledButton(
               onPressed: () {
                 if (nameController.text.trim().isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Company name is required.')),
+                    const SnackBar(
+                      content: Text('Байгууллагын нэрийг оруулна уу.'),
+                    ),
                   );
                   return;
                 }
@@ -717,7 +725,7 @@ class _PosShellState extends State<PosShell> {
                 });
               },
               style: FilledButton.styleFrom(backgroundColor: green),
-              child: const Text('Save company'),
+              child: const Text('Байгууллага хадгалах'),
             ),
           ],
         ),
@@ -748,13 +756,13 @@ class _PosShellState extends State<PosShell> {
           selectedApiCompanyId = match?['id']?.toString() ?? createdId;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Company "$companyName" added.')),
+          SnackBar(content: Text('«$companyName» байгууллагыг нэмлээ.')),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not add company: $error')),
+          SnackBar(content: Text('Байгууллага нэмж чадсангүй: $error')),
         );
       }
     } finally {
@@ -766,7 +774,7 @@ class _PosShellState extends State<PosShell> {
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Low stock · $currentWarehouse'),
+        title: Text('Үлдэгдэл багатай бараа · $currentWarehouse'),
         content: SizedBox(
           width: 360,
           child: Column(
@@ -780,9 +788,9 @@ class _PosShellState extends State<PosShell> {
                       children: [
                         Expanded(child: Text(product.name)),
                         Text(
-                          '${_stockFor(product)} left',
+                          'Үлдэгдэл: ${_stockFor(product)}',
                           style: const TextStyle(
-                            color: Color(0xFFB45309),
+                            color: warningInk,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -796,7 +804,7 @@ class _PosShellState extends State<PosShell> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('Хаах'),
           ),
         ],
       ),
@@ -808,7 +816,7 @@ class _PosShellState extends State<PosShell> {
         searchQuery.isEmpty ||
         product.searchText.contains(searchQuery.toLowerCase());
     final matchesCategory =
-        selectedCategory == 'All items' ||
+        selectedCategory == 'Бүх бараа' ||
         product.categoryCode == selectedCategory ||
         product.categoryName.toLowerCase() == selectedCategory.toLowerCase() ||
         (apiProducts == null &&
@@ -825,7 +833,9 @@ class _PosShellState extends State<PosShell> {
     if (alreadyInCart >= _stockFor(product)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('No more ${product.name} left in $currentWarehouse.'),
+          content: Text(
+            '$currentWarehouse агуулахад ${product.name} барааны нэмэлт үлдэгдэл алга.',
+          ),
         ),
       );
       return;
@@ -842,302 +852,303 @@ class _PosShellState extends State<PosShell> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Row(
-      children: [
-        Container(
-          width: 220,
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [deepSpace, deepSpaceMid, Color(0xFF102D3B)],
+  Widget _sidebar(BuildContext context, {required bool drawer}) {
+    void selectPage(int next) {
+      if (drawer) Navigator.pop(context);
+      setState(() => page = next);
+    }
+
+    return Container(
+      width: 220,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [deepSpace, deepSpaceMid, inputSurface],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x220A1424),
+            blurRadius: 24,
+            offset: Offset(8, 0),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(22, 26, 16, 34),
+            child: _Brand(),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (apiBranches.isEmpty) ...[
+                  const Text(
+                    'БАЙГУУЛЛАГА',
+                    style: TextStyle(
+                      color: aquaGlow,
+                      fontSize: 9,
+                      letterSpacing: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _ReferenceDropdown(
+                    initialValue: selectedCompany,
+                    dropdownColor: deepSpaceMid,
+                    style: const TextStyle(color: ink, fontSize: 12),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: panelColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    items: ['Oyudent', 'Centech']
+                        .map(
+                          (name) =>
+                              DropdownMenuItem(value: name, child: Text(name)),
+                        )
+                        .toList(),
+                    onChanged: count == 0 ? _selectCompany : null,
+                  ),
+                  if (count > 0)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 5),
+                      child: Text(
+                        'Солихын өмнө захиалгаа дуусгана уу',
+                        style: TextStyle(color: muted, fontSize: 8),
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Text(
+                    currentWarehouse,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: muted, fontSize: 9),
+                  ),
+                ],
+                if (apiBranches.isNotEmpty) ...[
+                  const Text(
+                    'САЛБАР / АГУУЛАХ',
+                    style: TextStyle(
+                      color: aquaGlow,
+                      fontSize: 9,
+                      letterSpacing: 1.1,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  _ReferenceDropdown(
+                    key: ValueKey('$selectedBranchId:$branchPickerRevision'),
+                    initialValue: selectedBranchId,
+                    dropdownColor: deepSpaceMid,
+                    style: const TextStyle(color: ink, fontSize: 11),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: panelColor,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 1,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    items: apiBranches
+                        .map(
+                          (branch) => DropdownMenuItem(
+                            value: branch['id']?.toString(),
+                            child: Text(
+                              _refName(branch),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: apiBusy ? null : _selectApiBranch,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    currentWarehouse,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: muted, fontSize: 9),
+                  ),
+                ],
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x220A1424),
-                blurRadius: 24,
-                offset: Offset(8, 0),
-              ),
-            ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(22, 26, 16, 34),
-                child: _Brand(inverse: true),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(22, 0, 0, 12),
+            child: Text(
+              'ҮНДСЭН ЦЭС',
+              style: TextStyle(
+                color: aquaGlow,
+                fontSize: 10,
+                letterSpacing: 1.5,
+                fontWeight: FontWeight.w700,
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (apiBranches.isEmpty) ...[
-                      const Text(
-                        'COMPANY',
-                        style: TextStyle(
-                          color: Color(0xFF93B0A0),
-                          fontSize: 9,
-                          letterSpacing: 1.3,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      _ReferenceDropdown(
-                        initialValue: selectedCompany,
-                        dropdownColor: deepSpaceMid,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                        ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: .08),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 3,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(9),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        items: ['Oyudent', 'Centech']
-                            .map(
-                              (name) => DropdownMenuItem(
-                                value: name,
-                                child: Text(name),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: count == 0 ? _selectCompany : null,
-                      ),
-                      if (count > 0)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 5),
-                          child: Text(
-                            'Finish current sale to switch',
-                            style: TextStyle(
-                              color: Color(0xFFAFC4B6),
-                              fontSize: 8,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(height: 6),
-                      Text(
-                        currentWarehouse,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFFAFC4B6),
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                    if (apiBranches.isNotEmpty) ...[
-                      const Text(
-                        'BRANCH / WAREHOUSE',
-                        style: TextStyle(
-                          color: Color(0xFF93B0A0),
-                          fontSize: 9,
-                          letterSpacing: 1.1,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 7),
-                      _ReferenceDropdown(
-                        key: ValueKey(
-                          '$selectedBranchId:$branchPickerRevision',
-                        ),
-                        initialValue: selectedBranchId,
-                        dropdownColor: deepSpaceMid,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                        ),
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.white.withValues(alpha: .08),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 1,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(9),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        items: apiBranches
-                            .map(
-                              (branch) => DropdownMenuItem(
-                                value: branch['id']?.toString(),
-                                child: Text(
-                                  _refName(branch),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: apiBusy ? null : _selectApiBranch,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        currentWarehouse,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFFAFC4B6),
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+            ),
+          ),
+          _NavItem(
+            icon: Icons.point_of_sale_outlined,
+            label: 'Борлуулалт',
+            selected: page == 0,
+            onTap: () => selectPage(0),
+          ),
+          _NavItem(
+            icon: Icons.receipt_long_outlined,
+            label: 'Зарлага',
+            selected: page == 1,
+            onTap: () => selectPage(1),
+          ),
+          _NavItem(
+            icon: Icons.inventory_2_outlined,
+            label: 'Бараа',
+            selected: page == 2,
+            onTap: () => selectPage(2),
+          ),
+          _NavItem(
+            icon: Icons.move_to_inbox_outlined,
+            label: 'Орлого',
+            selected: page == 3,
+            onTap: () => selectPage(3),
+          ),
+          _NavItem(
+            icon: Icons.list_alt,
+            label: "Туслах утга",
+            selected: page == 4,
+            onTap: () => selectPage(4),
+          ),
+          const Spacer(),
+          _profileMenu(
+            child: Container(
+              margin: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: panelColor,
+                borderRadius: BorderRadius.circular(13),
               ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(22, 0, 0, 12),
-                child: Text(
-                  'WORKSPACE',
-                  style: TextStyle(
-                    color: Color(0xFF93B0A0),
-                    fontSize: 10,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w700,
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 17,
+                    backgroundColor: aquaGlow,
+                    child: Text(
+                      'OY',
+                      style: TextStyle(
+                        color: deepSpace,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              _NavItem(
-                icon: Icons.point_of_sale_outlined,
-                label: 'Point of sale',
-                selected: page == 0,
-                onTap: () => setState(() => page = 0),
-              ),
-              _NavItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Zarlaga',
-                selected: page == 1,
-                onTap: () => setState(() => page = 1),
-              ),
-              _NavItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Products',
-                selected: page == 2,
-                onTap: () => setState(() => page = 2),
-              ),
-              _NavItem(
-                icon: Icons.move_to_inbox_outlined,
-                label: 'Orlogo',
-                selected: page == 3,
-                onTap: () => setState(() => page = 3),
-              ),
-              _NavItem(
-                icon: Icons.list_alt,
-                label: "Туслах утга",
-                selected: page == 4,
-                onTap: () => setState(() => page = 4),
-              ),
-              const Spacer(),
-              _profileMenu(
-                child: Container(
-                  margin: const EdgeInsets.all(14),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: .08),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 17,
-                        backgroundColor: Color(0xFFB9D5C2),
-                        child: Text(
-                          'OY',
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
                           style: TextStyle(
-                            color: Color(0xFF123E31),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            color: ink,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              userName,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 3),
-                            Text(
-                              isApiConnected ? currentWarehouse : 'Connecting…',
-                              style: TextStyle(
-                                color: Color(0xFFAFC4B6),
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
+                        SizedBox(height: 3),
+                        Text(
+                          isApiConnected
+                              ? currentWarehouse
+                              : 'Холбогдож байна…',
+                          style: TextStyle(color: muted, fontSize: 10),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              if (lowStockProducts.isNotEmpty)
-                _GlobalStockWarning(
-                  company: currentBusinessName,
-                  warehouse: currentWarehouse,
-                  count: lowStockProducts.length,
-                  onTap: _showLowStockDetails,
-                ),
-              Expanded(
-                child: page == 0
-                    ? _salesPage()
-                    : page == 1
-                    ? apiToken.isEmpty
-                          ? const ExpensePage()
-                          : ZarlagaInvoicePage(apiToken: apiToken)
-                    : page == 2
-                    ? ProductsPage(
-                        products: products,
-                        warehouse: currentWarehouse,
-                        stockFor: _stockFor,
-                        apiToken: apiToken,
-                        onReload: _refreshProductsWithoutClearingCart,
-                      )
-                    : page == 4
-                    ? _ReferencePage(apiToken: apiToken)
-                    : IncomingInvoicesPage(
-                        apiToken: apiToken,
-                        initialBranchId: selectedBranchId,
-                        onReload: _refreshProductsWithoutClearingCart,
-                      ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 1060;
+    return Scaffold(
+      drawer: compact
+          ? Drawer(
+              width: 236,
+              child: Builder(
+                builder: (context) => _sidebar(context, drawer: true),
               ),
-            ],
+            )
+          : null,
+      appBar: compact ? AppBar(toolbarHeight: 44, title: const _Brand()) : null,
+      body: Row(
+        children: [
+          if (!compact) _sidebar(context, drawer: false),
+          Expanded(
+            child: Column(
+              children: [
+                if (lowStockProducts.isNotEmpty)
+                  _GlobalStockWarning(
+                    company: currentBusinessName,
+                    warehouse: currentWarehouse,
+                    count: lowStockProducts.length,
+                    onTap: _showLowStockDetails,
+                  ),
+                Expanded(
+                  child: page == 0
+                      ? _salesPage()
+                      : page == 1
+                      ? apiToken.isEmpty
+                            ? const ExpensePage()
+                            : ZarlagaInvoicePage(apiToken: apiToken)
+                      : page == 2
+                      ? ProductsPage(
+                          products: products,
+                          warehouse: currentWarehouse,
+                          stockFor: _stockFor,
+                          apiToken: apiToken,
+                          onReload: _refreshProductsWithoutClearingCart,
+                        )
+                      : page == 4
+                      ? _ReferencePage(apiToken: apiToken)
+                      : IncomingInvoicesPage(
+                          apiToken: apiToken,
+                          initialBranchId: selectedBranchId,
+                          onReload: _refreshProductsWithoutClearingCart,
+                        ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 
   Widget _salesPage() => Column(
     children: [
       _TopBar(
-        title: 'Point of sale',
-        subtitle: 'Tuesday, November 17',
+        title: 'Борлуулалт',
+        subtitle: currentWarehouse,
         trailing: Row(
           children: [
             _ConnectionPill(
@@ -1146,14 +1157,11 @@ class _PosShellState extends State<PosShell> {
               onTap: _showApiConnection,
             ),
             const SizedBox(width: 15),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none, color: muted),
-            ),
+
             _profileMenu(
               child: const CircleAvatar(
                 radius: 16,
-                backgroundColor: Color(0xFFE3EBE5),
+                backgroundColor: activeSurface,
                 child: Text(
                   'O',
                   style: TextStyle(
@@ -1182,7 +1190,7 @@ class _PosShellState extends State<PosShell> {
                           child: Container(
                             height: 43,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: panelColor,
                               borderRadius: BorderRadius.circular(11),
                             ),
                             child: TextField(
@@ -1191,12 +1199,12 @@ class _PosShellState extends State<PosShell> {
                               onChanged: (value) =>
                                   setState(() => searchQuery = value.trim()),
                               decoration: InputDecoration(
-                                hintText: 'Search products...',
+                                hintText: 'Бараа хайх…',
                                 prefixIcon: Icon(Icons.search, size: 19),
                                 suffixIcon: searchQuery.isEmpty
                                     ? null
                                     : IconButton(
-                                        tooltip: 'Clear search',
+                                        tooltip: 'Хайлтыг арилгах',
                                         onPressed: () {
                                           searchController.clear();
                                           setState(() => searchQuery = '');
@@ -1209,17 +1217,6 @@ class _PosShellState extends State<PosShell> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        IconButton.filledTonal(
-                          onPressed: () {},
-                          icon: const Icon(Icons.tune, size: 19),
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -1229,8 +1226,8 @@ class _PosShellState extends State<PosShell> {
                       children: [
                         Text(
                           searchQuery.isNotEmpty
-                              ? 'Search results'
-                              : '$selectedCategory products',
+                              ? 'Хайлтын үр дүн'
+                              : '$selectedCategory',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -1239,7 +1236,7 @@ class _PosShellState extends State<PosShell> {
                         ),
                         const Spacer(),
                         Text(
-                          '${visibleProducts.length} found',
+                          '${visibleProducts.length} бараа',
                           style: const TextStyle(color: muted, fontSize: 12),
                         ),
                       ],
@@ -1249,18 +1246,18 @@ class _PosShellState extends State<PosShell> {
                       child: visibleProducts.isEmpty
                           ? const Center(
                               child: Text(
-                                'No matching products',
+                                'Тохирох бараа олдсонгүй',
                                 style: TextStyle(color: muted, fontSize: 13),
                               ),
                             )
                           : GridView.builder(
                               itemCount: visibleProducts.length,
                               gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 230,
                                     mainAxisSpacing: 12,
                                     crossAxisSpacing: 12,
-                                    childAspectRatio: 1.28,
+                                    mainAxisExtent: 190,
                                   ),
                               itemBuilder: (context, i) => _ProductCard(
                                 product: visibleProducts[i],
@@ -1275,7 +1272,10 @@ class _PosShellState extends State<PosShell> {
             ),
             Container(
               width: 318,
-              color: Colors.white,
+              decoration: const BoxDecoration(
+                color: panelColor,
+                border: Border(left: BorderSide(color: lineColor)),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1285,7 +1285,7 @@ class _PosShellState extends State<PosShell> {
                       children: [
                         const Expanded(
                           child: Text(
-                            'Current order',
+                            'Одоогийн захиалга',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
@@ -1299,11 +1299,11 @@ class _PosShellState extends State<PosShell> {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEAF2EC),
+                            color: activeSurface,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            '$count items',
+                            '$count ш',
                             style: const TextStyle(
                               color: green,
                               fontSize: 11,
@@ -1319,7 +1319,7 @@ class _PosShellState extends State<PosShell> {
                             color: muted,
                             size: 19,
                           ),
-                          tooltip: 'Clear order',
+                          tooltip: 'Захиалга цэвэрлэх',
                         ),
                       ],
                     ),
@@ -1327,7 +1327,12 @@ class _PosShellState extends State<PosShell> {
                   const Divider(height: 1),
                   Expanded(child: _cartContents()),
                   const Divider(height: 1),
-                  _orderTotals(),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: MediaQuery.sizeOf(context).height * .48,
+                    ),
+                    child: SingleChildScrollView(child: _orderTotals()),
+                  ),
                 ],
               ),
             ),
@@ -1357,25 +1362,23 @@ class _PosShellState extends State<PosShell> {
 
   Widget _cartContents() => cart.isEmpty
       ? const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.shopping_bag_outlined,
-                size: 34,
-                color: Color(0xFFCAD3CC),
-              ),
-              SizedBox(height: 12),
-              Text(
-                'Your order is empty',
-                style: TextStyle(color: muted, fontSize: 13),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Select an item to get started',
-                style: TextStyle(color: Color(0xFFA3ADA6), fontSize: 11),
-              ),
-            ],
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 34, color: lineColor),
+                SizedBox(height: 12),
+                Text(
+                  'Захиалга хоосон байна',
+                  style: TextStyle(color: muted, fontSize: 13),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Бараа сонгож захиалгаа эхлүүлнэ үү',
+                  style: TextStyle(color: muted, fontSize: 11),
+                ),
+              ],
+            ),
           ),
         )
       : ListView(
@@ -1410,12 +1413,12 @@ class _PosShellState extends State<PosShell> {
             children: [
               const Expanded(
                 child: Text(
-                  'Bill to company',
+                  'Худалдан авагч байгууллага',
                   style: TextStyle(color: muted, fontSize: 11),
                 ),
               ),
               IconButton(
-                tooltip: 'Add company',
+                tooltip: 'Байгууллага нэмэх',
                 visualDensity: VisualDensity.compact,
                 onPressed: apiBusy ? null : _showAddCompanyDialog,
                 icon: const Icon(Icons.person_add_alt_1_outlined, size: 17),
@@ -1433,7 +1436,7 @@ class _PosShellState extends State<PosShell> {
                   ? selectedApiCompanyId
                   : null,
               decoration: const InputDecoration(
-                hintText: 'Select company',
+                hintText: 'Байгууллага сонгох',
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 8,
@@ -1454,7 +1457,7 @@ class _PosShellState extends State<PosShell> {
               onChanged: (id) => setState(() => selectedApiCompanyId = id),
             )
           else
-            const Text('No companies loaded. Use + to add one.'),
+            const Text('Байгууллага олдсонгүй. + товчоор нэмнэ үү.'),
           const SizedBox(height: 9),
         ],
         TextField(
@@ -1462,7 +1465,7 @@ class _PosShellState extends State<PosShell> {
           minLines: 1,
           maxLines: 2,
           decoration: const InputDecoration(
-            labelText: 'Order note',
+            labelText: 'Захиалгын тэмдэглэл',
             prefixIcon: Icon(Icons.notes_outlined, size: 17),
             contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           ),
@@ -1473,7 +1476,7 @@ class _PosShellState extends State<PosShell> {
             tilePadding: EdgeInsets.zero,
             childrenPadding: const EdgeInsets.only(bottom: 8),
             title: const Text(
-              'Invoice details',
+              'Баримтын дэлгэрэнгүй',
               style: TextStyle(fontSize: 11, color: muted),
             ),
             children: [
@@ -1481,7 +1484,7 @@ class _PosShellState extends State<PosShell> {
                 readOnly: true,
                 onTap: _pickInvoiceDate,
                 decoration: InputDecoration(
-                  labelText: 'Invoice date',
+                  labelText: 'Баримтын огноо',
                   hintText: _formatInvoiceDate(invoiceDate),
                   prefixIcon: const Icon(
                     Icons.calendar_today_outlined,
@@ -1493,14 +1496,14 @@ class _PosShellState extends State<PosShell> {
               TextField(
                 controller: vatAccountController,
                 decoration: const InputDecoration(
-                  labelText: 'VAT bank account number',
+                  labelText: 'НӨАТ-тай төлбөрийн данс',
                 ),
               ),
               const SizedBox(height: 7),
               TextField(
                 controller: noVatAccountController,
                 decoration: const InputDecoration(
-                  labelText: 'No-VAT bank account number',
+                  labelText: 'НӨАТ-гүй төлбөрийн данс',
                 ),
               ),
             ],
@@ -1508,7 +1511,7 @@ class _PosShellState extends State<PosShell> {
         Row(
           children: [
             const Text(
-              'Subtotal',
+              'Завсрын дүн',
               style: TextStyle(color: muted, fontSize: 12),
             ),
             const Spacer(),
@@ -1522,7 +1525,7 @@ class _PosShellState extends State<PosShell> {
         Row(
           children: [
             const Text(
-              'VAT (10%)',
+              'НӨАТ (10%)',
               style: TextStyle(color: muted, fontSize: 12),
             ),
             const Spacer(),
@@ -1533,21 +1536,24 @@ class _PosShellState extends State<PosShell> {
           ],
         ),
         const SizedBox(height: 10),
-        Row(
+        Wrap(
+          spacing: 5,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             const Text(
-              'Payment receipt VAT',
+              'Баримтын төрөл',
               style: TextStyle(color: muted, fontSize: 11),
             ),
-            const Spacer(),
+
             _VatChoice(
-              label: 'With VAT',
+              label: 'НӨАТ-тай',
               selected: withVat,
               onTap: () => setState(() => withVat = true),
             ),
-            const SizedBox(width: 5),
+
             _VatChoice(
-              label: 'Without VAT',
+              label: 'НӨАТ-гүй',
               selected: !withVat,
               onTap: () => setState(() => withVat = false),
             ),
@@ -1557,7 +1563,7 @@ class _PosShellState extends State<PosShell> {
         Row(
           children: [
             const Text(
-              'Total',
+              'Нийт',
               style: TextStyle(
                 color: ink,
                 fontSize: 15,
@@ -1585,11 +1591,11 @@ class _PosShellState extends State<PosShell> {
                 : () => _checkout(
                     context,
                     includeVat: withVat,
-                    documentTitle: 'Payment receipt',
+                    documentTitle: 'Төлбөрийн баримт',
                   ),
             style: FilledButton.styleFrom(
               backgroundColor: green,
-              disabledBackgroundColor: const Color(0xFFDDE3DE),
+              disabledBackgroundColor: lineColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(11),
               ),
@@ -1599,9 +1605,12 @@ class _PosShellState extends State<PosShell> {
               children: [
                 const Icon(Icons.receipt_long_outlined, size: 17),
                 const SizedBox(width: 8),
-                const Text(
-                  'Төлбөрийн баримт',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                const Flexible(
+                  child: Text(
+                    'Төлбөрийн баримт',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                 ),
                 const SizedBox(width: 6),
                 if (apiBusy)
@@ -1629,10 +1638,10 @@ class _PosShellState extends State<PosShell> {
                     : () => _checkout(
                         context,
                         includeVat: true,
-                        documentTitle: 'VAT invoice',
+                        documentTitle: 'НӨАТ-тай нэхэмжлэх',
                       ),
                 icon: const Icon(Icons.receipt_outlined, size: 15),
-                label: const Text('Invoice with VAT', maxLines: 1),
+                label: const Text('НӨАТ-тай нэхэмжлэх', maxLines: 1),
               ),
             ),
             const SizedBox(width: 7),
@@ -1643,10 +1652,10 @@ class _PosShellState extends State<PosShell> {
                     : () => _checkout(
                         context,
                         includeVat: false,
-                        documentTitle: 'Invoice without VAT',
+                        documentTitle: 'НӨАТ-гүй нэхэмжлэх',
                       ),
                 icon: const Icon(Icons.receipt_outlined, size: 15),
-                label: const Text('Without VAT', maxLines: 1),
+                label: const Text('НӨАТ-гүй', maxLines: 1),
               ),
             ),
           ],
@@ -1698,7 +1707,7 @@ class _PosShellState extends State<PosShell> {
             : serverInvoiceNumber;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$documentTitle saved to Oyudent.')),
+            SnackBar(content: Text('$documentTitle хадгалагдлаа.')),
           );
           await _showPaymentReceipt(
             documentTitle: documentTitle,
@@ -1715,7 +1724,7 @@ class _PosShellState extends State<PosShell> {
         if (mounted) {
           setState(() => apiError = '$error');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Order was not saved: $error')),
+            SnackBar(content: Text('Захиалга хадгалагдсангүй: $error')),
           );
         }
       } finally {
@@ -1726,9 +1735,9 @@ class _PosShellState extends State<PosShell> {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('$documentTitle (demo)'),
+        title: Text('$documentTitle (туршилт)'),
         content: Text(
-          'Subtotal: ₮${_money(receiptSubtotal)}\nVAT: ₮${_money(receiptTax)}\nTotal: ₮${_money(receiptTotal)}\nConnect your sales API to save live transactions.',
+          'Завсрын дүн: ₮${_money(receiptSubtotal)}\nНӨАТ: ₮${_money(receiptTax)}\nНийт: ₮${_money(receiptTotal)}\nГүйлгээг бүртгэхийн тулд системд холбогдоно уу.',
         ),
         actions: [
           FilledButton(
@@ -1743,7 +1752,7 @@ class _PosShellState extends State<PosShell> {
                 cart.clear();
               });
             },
-            child: const Text('Done'),
+            child: const Text('Дуусгах'),
           ),
         ],
       ),
@@ -1769,7 +1778,7 @@ class _PosShellState extends State<PosShell> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
           return Dialog.fullscreen(
-            backgroundColor: const Color(0xff20232c),
+            backgroundColor: panelColor,
             child: Column(
               children: [
                 Container(
@@ -1779,13 +1788,13 @@ class _PosShellState extends State<PosShell> {
                   child: const Text(
                     'Зарлагын баримт',
                     style: TextStyle(
-                      color: Color(0xffe6e6f4),
+                      color: ink,
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                const Divider(height: 1, color: Color(0xff3a3d46)),
+                const Divider(height: 1, color: lineColor),
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(24),
@@ -1932,12 +1941,12 @@ class _PosShellState extends State<PosShell> {
                       OutlinedButton(
                         onPressed: () =>
                             setDialogState(() => landscape = false),
-                        child: const Text('Portrait'),
+                        child: const Text('Босоо'),
                       ),
                       const SizedBox(width: 8),
                       OutlinedButton(
                         onPressed: () => setDialogState(() => landscape = true),
-                        child: const Text('Landscape'),
+                        child: const Text('Хөндлөн'),
                       ),
                       const SizedBox(width: 12),
                       FilledButton.icon(

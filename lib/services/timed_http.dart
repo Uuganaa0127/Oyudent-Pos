@@ -14,7 +14,7 @@ Future<http.Response> timedHttp(
     return await send(client).timeout(limit);
   } on TimeoutException {
     throw TimeoutException(
-      '$stage timed out after ${limit.inSeconds} seconds. Check your connection and try again.',
+      '$stage · ${limit.inSeconds} секундэд хариу ирсэнгүй. Холболтоо шалгаад дахин оролдоно уу.',
     );
   } finally {
     client.close();
@@ -50,8 +50,8 @@ Future<T> importStep<T>(
   Duration retryDelay = const Duration(seconds: 1),
 }) async {
   for (var attempt = 1; ; attempt++) {
-    if (active?.call() == false) throw StateError('Import closed.');
-    final status = '$label · attempt $attempt of 3';
+    if (active?.call() == false) throw StateError('Импортыг хаалаа.');
+    final status = '$label · 3 оролдлогын $attempt дахь нь';
     report?.call(status);
     try {
       return await task(status);
@@ -60,20 +60,22 @@ Future<T> importStep<T>(
       final seconds = (wait.inMilliseconds / 1000).ceil();
       if (attempt == 3 || wait > const Duration(minutes: 3)) {
         throw FormatException(
-          'Kimi rate limit (HTTP 429) during $label. Retry in ${seconds > 0 ? seconds : 1} seconds. Your invoice is still selected.',
+          '$label · Kimi хүсэлтийн хязгаарт хүрлээ (HTTP 429). ${seconds > 0 ? seconds : 1} секундын дараа дахин оролдоно уу. Нэхэмжлэх сонгогдсон хэвээр байна.',
         );
       }
       for (var left = seconds; left > 0; left--) {
-        if (active?.call() == false) throw StateError('Import closed.');
-        report?.call('Kimi rate limit · retrying $label in ${left}s');
+        if (active?.call() == false) throw StateError('Импортыг хаалаа.');
+        report?.call(
+          'Kimi хүсэлтийн хязгаарт хүрлээ · $left секундын дараа дахин оролдоно: $label',
+        );
         await Future<void>.delayed(const Duration(seconds: 1));
       }
     } on TimeoutException {
       if (attempt == 3)
         throw TimeoutException(
-          '$label timed out on all three attempts. Your invoice is available to retry.',
+          '$label · Гурван оролдлогод хариу ирсэнгүй. Нэхэмжлэхээ дахин илгээж болно.',
         );
-      report?.call('$label timed out. Retrying…');
+      report?.call('$label · Хариу ирсэнгүй. Дахин оролдож байна…');
       await Future<void>.delayed(retryDelay * attempt);
     }
   }

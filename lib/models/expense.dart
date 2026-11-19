@@ -7,16 +7,22 @@ class Expense {
 }
 
 const _demoExpenses = [
-  Expense('Coffee beans · 5 kg', 'Supplies', 'Nov 17, 2026', 'Cash', 185000),
-  Expense('Milk and dairy', 'Supplies', 'Nov 16, 2026', 'Bank transfer', 92000),
+  Expense('Кофены үр · 5 кг', 'Хангамж', '2026.11.17', 'Бэлэн мөнгө', 185000),
+  Expense('Сүү, сүүн бүтээгдэхүүн', 'Хангамж', '2026.11.16', 'Дансаар', 92000),
   Expense(
-    'Store electricity',
-    'Utilities',
-    'Nov 15, 2026',
-    'Bank transfer',
+    'Дэлгүүрийн цахилгаан',
+    'Ашиглалтын зардал',
+    '2026.11.15',
+    'Дансаар',
     148500,
   ),
-  Expense('Paper cups and lids', 'Supplies', 'Nov 14, 2026', 'Cash', 76000),
-  Expense('Monthly rent', 'Rent', 'Nov 12, 2026', 'Bank transfer', 650000),
-  Expense('Cleaning supplies', 'Other', 'Nov 10, 2026', 'Cash', 42000),
+  Expense('Цаасан аяга, таг', 'Хангамж', '2026.11.14', 'Бэлэн мөнгө', 76000),
+  Expense('Сарын түрээс', 'Түрээс', '2026.11.12', 'Дансаар', 650000),
+  Expense(
+    'Цэвэрлэгээний хэрэгсэл',
+    'Бусад',
+    '2026.11.10',
+    'Бэлэн мөнгө',
+    42000,
+  ),
 ];
