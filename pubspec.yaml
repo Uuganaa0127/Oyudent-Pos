@@ -1,7 +1,7 @@
 name: oyudent_pos
 description: Desktop point of sale starter with sales and expenses screens.
 publish_to: none
-version: 1.0.1+2
+version: 1.0.2+3
 environment:
   sdk: ^3.13.2
 dependencies:

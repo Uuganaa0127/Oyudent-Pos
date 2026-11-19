@@ -465,6 +465,31 @@ class _PosShellState extends State<PosShell> {
         _apiGet('/order/get-available-stocks?branch_id=$selectedBranchId'),
     ]);
     if (!mounted || selectedBranchId != branch || apiToken != token) return;
+    apiCatalog = _asMapList(results.first);
+    if (selectedBranchId != null && results.length > 1) {
+      _replaceStockRows(_asMapList(results[1]));
+    } else {
+      _replaceStockRows(apiStockRows);
+    }
+  }
+
+  bool _showReceivedStock(String branch, List<Map<String, dynamic>> rows) {
+    if (!mounted || apiBusy) return false;
+    if (branch != selectedBranchId) {
+      if (cart.isNotEmpty ||
+          !apiBranches.any((b) => b['id']?.toString() == branch))
+        return false;
+      selectedBranchId = branch;
+      branchPickerRevision++;
+      selectedCategory = 'Бүх бараа';
+      searchController.clear();
+      searchQuery = '';
+    }
+    _replaceStockRows(rows);
+    return true;
+  }
+
+  void _replaceStockRows(List<Map<String, dynamic>> rows) {
     final previous = <String, int>{};
     final previousNotes = <String, String>{};
     final previousPrices = <String, double>{};
@@ -477,10 +502,7 @@ class _PosShellState extends State<PosShell> {
       final note = lineNotes[entry.key];
       if (note != null) previousNotes[key] = note;
     }
-    apiCatalog = _asMapList(results.first);
-    if (selectedBranchId != null && results.length > 1) {
-      apiStockRows = _asMapList(results[1]['data']);
-    }
+    apiStockRows = rows;
     _rebuildApiProducts();
     _clearCart();
     for (var index = 0; index < products.length; index++) {
@@ -1167,6 +1189,7 @@ class _PosShellState extends State<PosShell> {
                       : page == 4
                       ? _ReferencePage(apiToken: apiToken)
                       : IncomingInvoicesPage(
+                          onStock: _showReceivedStock,
                           apiToken: apiToken,
                           initialBranchId: selectedBranchId,
                           onReload: _refreshProductsWithoutClearingCart,

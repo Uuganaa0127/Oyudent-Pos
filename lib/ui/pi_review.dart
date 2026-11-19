@@ -423,6 +423,8 @@ class _PiReviewState extends State<_PiReview> {
     );
     if (choice != null && mounted)
       setState(() {
+        items[i].remove('chosen_warehouse');
+        items[i].remove('chosen_branch');
         items[i]['review_brand'] = brandKey(choice['supplier_name']);
         selected[i] = choice['product_id'].toString();
         items[i]['chosen_variant'] = choice['id'].toString();
@@ -439,7 +441,8 @@ class _PiReviewState extends State<_PiReview> {
       );
       return;
     }
-    final saved = await showDialog<bool>(
+    final saved = await showDialog<_IncomingReceipt>(
+      barrierDismissible: false,
       context: context,
       builder: (_) => _IncomingInvoiceDialog(
         apiToken: widget.token,
@@ -470,7 +473,7 @@ class _PiReviewState extends State<_PiReview> {
         },
       ),
     );
-    if (saved == true && mounted) Navigator.pop(context, true);
+    if (saved != null && mounted) Navigator.pop(context, saved);
   }
 
   @override
@@ -580,6 +583,9 @@ class _PiReviewState extends State<_PiReview> {
                                 }
                                 setState(() {
                                   selected[i] = choice['product_id'].toString();
+                                  row['chosen_branch'] = choice['branch_id'];
+                                  row['chosen_warehouse'] =
+                                      choice['warehouse_id'];
                                   row['chosen_variant'] = choice['variant_id']
                                       ?.toString();
                                   row['chosen_label'] = [

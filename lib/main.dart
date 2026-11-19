@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async' show TimeoutException;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart' show compute;
 import 'services/invoice_excel.dart';
@@ -27,6 +28,7 @@ part 'ui/invoice_pages.dart';
 part 'ui/order_details.dart';
 part 'ui/product_pages.dart';
 part 'ui/incoming_invoice_page.dart';
+part 'ui/incoming_stock.dart';
 part 'ui/shipment_pricing.dart';
 part 'ui/dialogs.dart';
 part 'ui/shared_widgets.dart';
