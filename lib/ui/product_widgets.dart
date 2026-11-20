@@ -1,11 +1,12 @@
 part of '../main.dart';
 
 class _ProductCard extends StatelessWidget {
-  final Product product;
-  final int stock;
+  final _ProductGroup group;
+  Product get product => group.product;
+  final num stock;
   final VoidCallback onTap;
   const _ProductCard({
-    required this.product,
+    required this.group,
     required this.stock,
     required this.onTap,
   });
@@ -52,22 +53,19 @@ class _ProductCard extends StatelessWidget {
             ),
             const SizedBox(height: 3),
             Text(
-              [product.reference, product.lotNumber]
-                      .where((value) => value.trim().isNotEmpty)
-                      .join(' · ')
-                      .isEmpty
-                  ? product.categoryName
+              group.multiple
+                  ? '${group.lines.length} сонголт · Хувилбар, агуулах'
                   : [
                       product.reference,
                       product.lotNumber,
-                    ].where((value) => value.trim().isNotEmpty).join(' · '),
+                    ].where((v) => v.isNotEmpty).join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: muted, fontSize: 10),
             ),
             const SizedBox(height: 3),
             Text(
-              'Үлдэгдэл: $stock',
+              'Үлдэгдэл: ${_stockText(stock)}',
               style: TextStyle(
                 color: stock <= 5 ? warningInk : muted,
                 fontSize: 10,
@@ -79,19 +77,17 @@ class _ProductCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    product.detail,
+                    group.multiple ? product.categoryName : product.detail,
                     style: const TextStyle(color: muted, fontSize: 9),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Text(
-                  stock <= 0 && product.apiStock == null
-                      ? 'Энэ салбарт үлдэгдэлгүй'
+                  group.multiple
+                      ? 'Сонгох'
                       : '₮${_money(product.price.toDouble())}',
                   style: TextStyle(
-                    color: stock <= 0 && product.apiStock == null
-                        ? warningInk
-                        : green,
+                    color: green,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                   ),
@@ -103,6 +99,99 @@ class _ProductCard extends StatelessWidget {
       ),
     ),
   );
+}
+
+String _stockText(num quantity) => quantity == quantity.truncate()
+    ? quantity.truncate().toString()
+    : quantity.toString();
+
+String _optionDescription(Product p) {
+  final row = p.apiStock;
+  if (row == null) return p.detail;
+  return [
+    row['color_name'],
+    row['size_name'],
+    row['weight'],
+    row['unit_name'],
+    row['warehouse_name'],
+    if (p.barcode.isNotEmpty) p.barcode,
+    if ((row['lot_number'] ?? row['lot_no']) != null)
+      'Лот: ${row['lot_number'] ?? row['lot_no']}',
+    if (row['expiration_date'] != null)
+      'Дуусах: ${_displayApiDate(row['expiration_date'])}',
+  ].where((v) => v != null && v.toString().trim().isNotEmpty).join(' · ');
+}
+
+class _StockOptions extends StatefulWidget {
+  const _StockOptions({
+    required this.group,
+    required this.query,
+    required this.stockFor,
+    this.selectable = true,
+  });
+  final _ProductGroup group;
+  final String query;
+  final num Function(Product) stockFor;
+  final bool selectable;
+  @override
+  State<_StockOptions> createState() => _StockOptionsState();
+}
+
+class _StockOptionsState extends State<_StockOptions> {
+  late String query = widget.query;
+  @override
+  Widget build(BuildContext context) {
+    final matches = widget.group.choices(query.trim().toLowerCase());
+    final options = [
+      ...matches.where((p) => widget.stockFor(p) > 0),
+      ...matches.where((p) => widget.stockFor(p) <= 0),
+    ];
+    return AlertDialog(
+      title: Text(widget.group.product.name),
+      content: SizedBox(
+        width: 560,
+        height: 420,
+        child: Column(
+          children: [
+            TextFormField(
+              initialValue: query,
+              decoration: const InputDecoration(
+                labelText: 'Хувилбар, агуулах, лот, баркодоор хайх',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (v) => setState(() => query = v),
+            ),
+            Expanded(
+              child: options.isEmpty
+                  ? const Center(child: Text('Тохирох сонголт олдсонгүй.'))
+                  : ListView.separated(
+                      itemCount: options.length,
+                      separatorBuilder: (_, _) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final p = options[i];
+                        return ListTile(
+                          title: Text(_optionDescription(p)),
+                          subtitle: Text(
+                            'Үлдэгдэл: ${_stockText(widget.stockFor(p))} · ₮${_money(p.price.toDouble())}',
+                          ),
+                          onTap: widget.selectable
+                              ? () => Navigator.pop(context, p)
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Хаах'),
+        ),
+      ],
+    );
+  }
 }
 
 class _ProductImage extends StatelessWidget {
@@ -196,6 +285,7 @@ class _SalePriceDialogState extends State<_SalePriceDialog> {
 class _CartLine extends StatelessWidget {
   final Product product;
   final int quantity;
+  final num stock;
   final double price;
   final VoidCallback? editPrice;
   final VoidCallback onMinus, onPlus;
@@ -204,6 +294,7 @@ class _CartLine extends StatelessWidget {
   const _CartLine({
     required this.product,
     required this.quantity,
+    required this.stock,
     required this.price,
     required this.editPrice,
     required this.onMinus,
@@ -244,6 +335,18 @@ class _CartLine extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
+                  if (product.apiStock != null)
+                    Text(
+                      _optionDescription(product),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: muted, fontSize: 10),
+                    ),
+                  if (quantity > stock)
+                    Text(
+                      'Зарлагын дараах үлдэгдэл: ${_stockText(stock - quantity)}',
+                      style: const TextStyle(color: warningInk, fontSize: 10),
+                    ),
                   const SizedBox(height: 4),
                   TextButton.icon(
                     onPressed: editPrice,
@@ -286,9 +389,7 @@ class _CartLine extends StatelessWidget {
         if (product.apiStock != null) ...[
           const SizedBox(height: 6),
           TextFormField(
-            key: ValueKey(
-              '${product.barcode}:${product.apiStock?['variant_id']}',
-            ),
+            key: ValueKey(_stockLineKey(product.apiStock!)),
             initialValue: note,
             onChanged: onNoteChanged,
             decoration: const InputDecoration(
@@ -328,8 +429,13 @@ class _InventoryHeader extends StatelessWidget {
 
 class _InventoryRow extends StatelessWidget {
   final Product product;
-  final int quantity;
-  const _InventoryRow({required this.product, required this.quantity});
+  final num quantity;
+  final int options;
+  const _InventoryRow({
+    required this.product,
+    required this.quantity,
+    required this.options,
+  });
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -360,7 +466,7 @@ class _InventoryRow extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                product.detail,
+                options > 1 ? product.categoryName : product.detail,
                 style: const TextStyle(color: muted, fontSize: 9),
               ),
             ],
@@ -369,21 +475,23 @@ class _InventoryRow extends StatelessWidget {
         Expanded(
           flex: 2,
           child: Text(
-            product.reference,
+            options > 1
+                ? (product.apiStock?['code'] ?? '').toString()
+                : product.reference,
             style: const TextStyle(color: muted, fontSize: 10),
           ),
         ),
         Expanded(
           flex: 2,
           child: Text(
-            product.lotNumber,
+            options > 1 ? '$options сонголт' : product.lotNumber,
             style: const TextStyle(color: muted, fontSize: 10),
           ),
         ),
         SizedBox(
           width: 90,
           child: Text(
-            '$quantity',
+            _stockText(quantity),
             textAlign: TextAlign.right,
             style: TextStyle(
               color: quantity <= 5 ? warningInk : ink,

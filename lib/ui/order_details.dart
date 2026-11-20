@@ -123,7 +123,6 @@ class _ReturnLine {
   final Map<String, dynamic> stock;
   String quantity, price;
   final double taxShare;
-  double? available;
   int revision = 0;
   double get gross => _orderNumber(quantity) * _orderNumber(price);
   double get tax => double.parse((gross * taxShare).toStringAsFixed(2));
@@ -166,7 +165,11 @@ class _OrderDetailsState extends State<_OrderDetails> {
       );
       if (!mounted) return;
       final stocks = _asMapList(response)
-          .where((r) => _orderNumber(r['quantity']) > 0)
+          .where(
+            (r) =>
+                _hasOrderIds(r) &&
+                (r['branch_id'] == null || r['branch_id'].toString() == branch),
+          )
           .toList();
       setState(() => loadingStock = false);
       final stock = await showDialog<Map<String, dynamic>>(
@@ -183,14 +186,10 @@ class _OrderDetailsState extends State<_OrderDetails> {
       final existing = lines
           .where((l) => _stockLineKey(l.stock) == key)
           .firstOrNull;
-      final available = _orderNumber(stock['quantity']);
       final next = existing == null ? 1.0 : _orderNumber(existing.quantity) + 1;
-      if (next > available)
-        throw Exception('Сонгосон лотын үлдэгдэл хүрэлцэхгүй.');
       setState(() {
         if (existing != null) {
           existing.quantity = next.toString();
-          existing.available = available;
           existing.revision++;
         } else {
           final net = _orderNumber(
@@ -210,7 +209,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
               '1',
               gross.toStringAsFixed(2),
               vat ? 1 / 11 : 0,
-            )..available = available,
+            ),
           );
         }
       });
@@ -256,7 +255,7 @@ class _OrderDetailsState extends State<_OrderDetails> {
           'productId': line['product_id'],
           'variantId': line['variant_id'],
           'warehouseId': line['warehouse_id'],
-          'inInvoiceId': line['in_invoice_id'],
+          'inInvoiceId': _orderInvoiceId(line),
           'quantity': qty,
           'grossUnitPrice': gross,
           'netUnitPrice': gross - newTax / qty,
@@ -310,8 +309,6 @@ class _OrderDetailsState extends State<_OrderDetails> {
         final n = double.tryParse(text ?? '');
         if (n == null || !n.isFinite || n < 0 || (!price && n == 0))
           return 'Зөв тоон утга оруулна уу';
-        if (!price && lines[i].available != null && n > lines[i].available!)
-          return 'Үлдэгдэл: ${lines[i].available}';
         return null;
       },
       onChanged: (v) => setState(() {

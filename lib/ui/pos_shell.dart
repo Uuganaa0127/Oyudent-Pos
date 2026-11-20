@@ -181,6 +181,20 @@ class _PosShellState extends State<PosShell> {
     ),
   ];
   List<Product> get products => apiProducts ?? demoProducts;
+  List<Product>? _groupedSource;
+  List<_ProductGroup> _groups = [];
+  List<_ProductGroup> get productGroups {
+    if (!identical(_groupedSource, products)) {
+      _groupedSource = products;
+      _groups = _ProductGroup.byProduct(products);
+    }
+    return _groups;
+  }
+
+  num _groupStock(_ProductGroup group) => group.product.apiStock == null
+      ? _stockFor(group.product)
+      : group.branchQuantity;
+
   List<MapEntry<String, String>> get categoryOptions {
     if (apiProducts == null) {
       return const [
@@ -256,9 +270,9 @@ class _PosShellState extends State<PosShell> {
   }
 
   bool get isApiConnected => apiToken.isNotEmpty && apiProducts != null;
-  int _stockFor(Product product) {
+  num _stockFor(Product product) {
     if (product.apiStock != null) {
-      return _asInt(product.apiStock!['quantity']);
+      return product.oyudentStock;
     }
     if (apiProducts != null) return 0;
     final index = products.indexOf(product);
@@ -268,12 +282,8 @@ class _PosShellState extends State<PosShell> {
     return baseStock + (stockAdjustments[selectedCompany]?[index] ?? 0);
   }
 
-  List<Product> get lowStockProducts => products
-      .where(
-        (product) =>
-            (apiProducts == null || product.apiStock != null) &&
-            _stockFor(product) <= lowStockThreshold,
-      )
+  List<_ProductGroup> get lowStockProducts => productGroups
+      .where((group) => _groupStock(group) <= lowStockThreshold)
       .toList();
 
   void _selectCompany(String? company) {
@@ -508,7 +518,7 @@ class _PosShellState extends State<PosShell> {
     for (var index = 0; index < products.length; index++) {
       final product = products[index];
       final key = _stockLineKey(product.apiStock ?? {});
-      final quantity = previous[key];
+      final quantity = previous.remove(key);
       if (quantity != null) {
         cart[index] = quantity;
         final price = previousPrices[key];
@@ -607,15 +617,15 @@ class _PosShellState extends State<PosShell> {
     final items = cart.entries.map((entry) {
       final product = products[entry.key];
       final stock = product.apiStock;
-      if (stock == null)
-        throw Exception('Захиалга өгөхийн өмнө үлдэгдлийг шинэчилнэ үү.');
+      if (!_hasOrderIds(stock))
+        throw Exception('Барааны хувилбар, агуулахыг сонгоно уу.');
       final netPrice = _salePrice(entry.key);
       final lineVat = includeVat ? _lineVat(entry.key, entry.value) : 0.0;
       return {
-        'productId': stock['product_id'],
+        'productId': stock!['product_id'],
         'variantId': stock['variant_id'],
         'warehouseId': stock['warehouse_id'],
-        'inInvoiceId': stock['in_invoice_id'],
+        'inInvoiceId': _orderInvoiceId(stock),
         'netUnitPrice': netPrice,
         'grossUnitPrice': netPrice + (includeVat ? netPrice * .1 : 0),
         'quantity': entry.value,
@@ -829,34 +839,20 @@ class _PosShellState extends State<PosShell> {
   }
 
   void _showLowStockDetails() {
+    final groups = lowStockProducts;
     showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Үлдэгдэл багатай бараа · $currentWarehouse'),
         content: SizedBox(
-          width: 360,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: lowStockProducts
-                .map(
-                  (product) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Row(
-                      children: [
-                        Expanded(child: Text(product.name)),
-                        Text(
-                          'Үлдэгдэл: ${_stockFor(product)}',
-                          style: const TextStyle(
-                            color: warningInk,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-                .toList(),
+          width: 420,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: groups.length,
+            itemBuilder: (_, i) => ListTile(
+              title: Text(groups[i].product.name),
+              trailing: Text('Үлдэгдэл: ${_stockText(_groupStock(groups[i]))}'),
+            ),
           ),
         ),
         actions: [
@@ -869,36 +865,52 @@ class _PosShellState extends State<PosShell> {
     );
   }
 
-  List<Product> get visibleProducts => products.where((product) {
-    final matchesQuery =
-        searchQuery.isEmpty ||
-        product.searchText.contains(searchQuery.toLowerCase());
-    final matchesCategory =
-        selectedCategory == 'Бүх бараа' ||
-        product.categoryCode == selectedCategory ||
-        product.categoryName.toLowerCase() == selectedCategory.toLowerCase() ||
-        (apiProducts == null &&
-            product.detail.toLowerCase().contains(
-              selectedCategory.toLowerCase(),
-            ));
-    return matchesQuery && matchesCategory;
-  }).toList();
+  List<_ProductGroup> get visibleGroups {
+    final query = searchQuery.toLowerCase();
+    return productGroups.where((group) {
+      final p = group.product;
+      return (selectedCategory == 'Бүх бараа' ||
+              p.categoryCode == selectedCategory ||
+              p.categoryName.toLowerCase() == selectedCategory.toLowerCase() ||
+              (apiProducts == null &&
+                  p.detail.toLowerCase().contains(
+                    selectedCategory.toLowerCase(),
+                  ))) &&
+          group.matches(query);
+    }).toList();
+  }
+
+  Future<void> _chooseSaleLine(_ProductGroup group) async {
+    if (apiBusy) return;
+    final options = group.choices(searchQuery.toLowerCase());
+    final product = options.length == 1
+        ? options.single
+        : await showDialog<Product>(
+            context: context,
+            builder: (_) => _StockOptions(
+              group: group,
+              query: searchQuery,
+              stockFor: _stockFor,
+            ),
+          );
+    if (mounted && product != null && products.contains(product))
+      _addToCart(product);
+  }
+
   int get count => cart.values.fold(0, (a, b) => a + b);
 
   void _addToCart(Product product) {
     final productIndex = products.indexOf(product);
-    final alreadyInCart = cart[productIndex] ?? 0;
-    if (alreadyInCart >= _stockFor(product)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '$currentWarehouse агуулахад ${product.name} барааны нэмэлт үлдэгдэл алга.',
-          ),
-        ),
+    if (apiBusy || productIndex < 0) return;
+    if (isApiConnected && !_hasOrderIds(product.apiStock)) {
+      _notice(
+        context,
+        'Энэ бараанд захиалж болох хувилбар, агуулах бүртгэгдээгүй байна.',
+        failed: true,
       );
       return;
     }
-    setState(() => cart[productIndex] = alreadyInCart + 1);
+    setState(() => cart[productIndex] = (cart[productIndex] ?? 0) + 1);
   }
 
   @override
@@ -1148,6 +1160,7 @@ class _PosShellState extends State<PosShell> {
   @override
   Widget build(BuildContext context) {
     final compact = MediaQuery.sizeOf(context).width < 1060;
+    final lowStock = lowStockProducts;
     return Scaffold(
       drawer: compact
           ? Drawer(
@@ -1164,11 +1177,11 @@ class _PosShellState extends State<PosShell> {
           Expanded(
             child: Column(
               children: [
-                if (lowStockProducts.isNotEmpty)
+                if (lowStock.isNotEmpty)
                   _GlobalStockWarning(
                     company: currentBusinessName,
                     warehouse: currentWarehouse,
-                    count: lowStockProducts.length,
+                    count: lowStock.length,
                     onTap: _showLowStockDetails,
                   ),
                 Expanded(
@@ -1180,7 +1193,7 @@ class _PosShellState extends State<PosShell> {
                             : ZarlagaInvoicePage(apiToken: apiToken)
                       : page == 2
                       ? ProductsPage(
-                          products: products,
+                          groups: productGroups,
                           warehouse: currentWarehouse,
                           stockFor: _stockFor,
                           apiToken: apiToken,
@@ -1203,205 +1216,214 @@ class _PosShellState extends State<PosShell> {
     );
   }
 
-  Widget _salesPage() => Column(
-    children: [
-      _TopBar(
-        title: 'Борлуулалт',
-        subtitle: currentWarehouse,
-        trailing: Row(
-          children: [
-            _ConnectionPill(
-              connected: isApiConnected,
-              loading: apiBusy,
-              onTap: _showApiConnection,
-            ),
-            const SizedBox(width: 15),
+  Widget _salesPage() {
+    final visible = visibleGroups;
+    return Column(
+      children: [
+        _TopBar(
+          title: 'Борлуулалт',
+          subtitle: currentWarehouse,
+          trailing: Row(
+            children: [
+              _ConnectionPill(
+                connected: isApiConnected,
+                loading: apiBusy,
+                onTap: _showApiConnection,
+              ),
+              const SizedBox(width: 15),
 
-            _profileMenu(
-              child: const CircleAvatar(
-                radius: 16,
-                backgroundColor: activeSurface,
-                child: Text(
-                  'O',
-                  style: TextStyle(
-                    color: green,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+              _profileMenu(
+                child: const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: activeSurface,
+                  child: Text(
+                    'O',
+                    style: TextStyle(
+                      color: green,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      Expanded(
-        child: Row(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(26, 23, 18, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            height: 43,
-                            decoration: BoxDecoration(
-                              color: panelColor,
-                              borderRadius: BorderRadius.circular(11),
-                            ),
-                            child: TextField(
-                              controller: searchController,
-                              autofocus: true,
-                              onChanged: (value) =>
-                                  setState(() => searchQuery = value.trim()),
-                              decoration: InputDecoration(
-                                hintText: 'Бараа хайх…',
-                                prefixIcon: Icon(Icons.search, size: 19),
-                                suffixIcon: searchQuery.isEmpty
-                                    ? null
-                                    : IconButton(
-                                        tooltip: 'Хайлтыг арилгах',
-                                        onPressed: () {
-                                          searchController.clear();
-                                          setState(() => searchQuery = '');
-                                        },
-                                        icon: const Icon(Icons.close, size: 17),
-                                      ),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.only(top: 5),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(26, 23, 18, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 43,
+                              decoration: BoxDecoration(
+                                color: panelColor,
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: TextField(
+                                controller: searchController,
+                                autofocus: true,
+                                onChanged: (value) =>
+                                    setState(() => searchQuery = value.trim()),
+                                decoration: InputDecoration(
+                                  hintText: 'Бараа хайх…',
+                                  prefixIcon: Icon(Icons.search, size: 19),
+                                  suffixIcon: searchQuery.isEmpty
+                                      ? null
+                                      : IconButton(
+                                          tooltip: 'Хайлтыг арилгах',
+                                          onPressed: () {
+                                            searchController.clear();
+                                            setState(() => searchQuery = '');
+                                          },
+                                          icon: const Icon(
+                                            Icons.close,
+                                            size: 17,
+                                          ),
+                                        ),
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.only(top: 5),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _categoryChips(),
-                    const SizedBox(height: 21),
-                    Row(
-                      children: [
-                        Text(
-                          searchQuery.isNotEmpty
-                              ? 'Хайлтын үр дүн'
-                              : '$selectedCategory',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: ink,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${visibleProducts.length} бараа',
-                          style: const TextStyle(color: muted, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Expanded(
-                      child: visibleProducts.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Тохирох бараа олдсонгүй',
-                                style: TextStyle(color: muted, fontSize: 13),
-                              ),
-                            )
-                          : GridView.builder(
-                              itemCount: visibleProducts.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 230,
-                                    mainAxisSpacing: 12,
-                                    crossAxisSpacing: 12,
-                                    mainAxisExtent: 190,
-                                  ),
-                              itemBuilder: (context, i) => _ProductCard(
-                                product: visibleProducts[i],
-                                stock: _stockFor(visibleProducts[i]),
-                                onTap: () => _addToCart(visibleProducts[i]),
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Container(
-              width: 318,
-              decoration: const BoxDecoration(
-                color: panelColor,
-                border: Border(left: BorderSide(color: lineColor)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Одоогийн захиалга',
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _categoryChips(),
+                      const SizedBox(height: 21),
+                      Row(
+                        children: [
+                          Text(
+                            searchQuery.isNotEmpty
+                                ? 'Хайлтын үр дүн'
+                                : '$selectedCategory',
                             style: TextStyle(
-                              fontSize: 17,
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: ink,
                             ),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 9,
-                            vertical: 5,
+                          const Spacer(),
+                          Text(
+                            '${visible.length} бараа',
+                            style: const TextStyle(color: muted, fontSize: 12),
                           ),
-                          decoration: BoxDecoration(
-                            color: activeSurface,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '$count ш',
-                            style: const TextStyle(
-                              color: green,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Expanded(
+                        child: visible.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'Тохирох бараа олдсонгүй',
+                                  style: TextStyle(color: muted, fontSize: 13),
+                                ),
+                              )
+                            : GridView.builder(
+                                itemCount: visible.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 230,
+                                      mainAxisSpacing: 12,
+                                      crossAxisSpacing: 12,
+                                      mainAxisExtent: 190,
+                                    ),
+                                itemBuilder: (context, i) => _ProductCard(
+                                  group: visible[i],
+                                  stock: _groupStock(visible[i]),
+                                  onTap: () => _chooseSaleLine(visible[i]),
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: 318,
+                decoration: const BoxDecoration(
+                  color: panelColor,
+                  border: Border(left: BorderSide(color: lineColor)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 18),
+                      child: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Одоогийн захиалга',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                color: ink,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 9),
-                        IconButton(
-                          onPressed: () => setState(_clearCart),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: muted,
-                            size: 19,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 9,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: activeSurface,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              '$count ш',
+                              style: const TextStyle(
+                                color: green,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          tooltip: 'Захиалга цэвэрлэх',
+                          const SizedBox(width: 9),
+                          IconButton(
+                            onPressed: () => setState(_clearCart),
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: muted,
+                              size: 19,
+                            ),
+                            tooltip: 'Захиалга цэвэрлэх',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(child: _cartContents()),
+                    const Divider(height: 1),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxHeight: MediaQuery.sizeOf(context).height * .48,
+                      ),
+                      child: SingleChildScrollView(
+                        child: Material(
+                          color: panelColor,
+                          child: _orderTotals(),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(child: _cartContents()),
-                  const Divider(height: 1),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxHeight: MediaQuery.sizeOf(context).height * .48,
-                    ),
-                    child: SingleChildScrollView(
-                      child: Material(color: panelColor, child: _orderTotals()),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 
   Widget _categoryChips() => SingleChildScrollView(
     scrollDirection: Axis.horizontal,
@@ -1449,6 +1471,7 @@ class _PosShellState extends State<PosShell> {
                 (e) => _CartLine(
                   product: products[e.key],
                   quantity: e.value,
+                  stock: _stockFor(products[e.key]),
                   price: _salePrice(e.key),
                   editPrice: apiBusy ? null : () => _editSalePrice(e.key),
                   onMinus: () => setState(() {

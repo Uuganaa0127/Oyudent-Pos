@@ -1,7 +1,7 @@
 name: oyudent_pos
 description: Desktop point of sale starter with sales and expenses screens.
 publish_to: none
-version: 1.0.2+3
+version: 1.0.3+4
 environment:
   sdk: ^3.13.2
 dependencies:
@@ -13,6 +13,9 @@ dependencies:
   archive: ^3.6.1
   xml: ^7.0.1
   http: ^1.5.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
 flutter:
   assets:
     - assets/oyudent-excel.html

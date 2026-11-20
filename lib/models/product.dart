@@ -5,7 +5,8 @@ class Product {
   final String reference, lotNumber, barcode;
   final String categoryCode, categoryName;
   final String? imageUrl;
-  final int price, oyudentStock, centechStock;
+  final int price;
+  final num oyudentStock, centechStock;
   final Color tint;
   final Map<String, dynamic>? apiStock;
   String get searchText {
@@ -33,6 +34,9 @@ class Product {
       source['supplier_code'],
       source['partner_name'],
       source['barcode'],
+      source['lot_no'],
+      source['note'],
+      source['expiration_date'],
       source['size'],
       source['size_name'],
       source['color'],
@@ -86,19 +90,29 @@ class Product {
       unit,
       warehouse,
     ].where((part) => part.trim().isNotEmpty).join(' · ');
+    final quantity = num.tryParse('${stock['quantity']}') ?? 0;
     return Product(
       name,
       detail.isEmpty ? 'Бараа' : detail,
       _asInt(stock['unit_price'] ?? stock['base_unit_price'] ?? stock['price']),
       '📦',
       deepSpaceMid,
-      reference: (stock['sku'] ?? stock['product_code'] ?? stock['code'] ?? '')
-          .toString(),
-      lotNumber: (stock['lot_number'] ?? stock['expiration_date'] ?? '')
-          .toString(),
+      reference:
+          [
+            stock['sku'],
+            stock['product_code'],
+            stock['code'],
+          ].whereType<String>().where((v) => v.trim().isNotEmpty).firstOrNull ??
+          '',
+      lotNumber:
+          (stock['lot_number'] ??
+                  stock['lot_no'] ??
+                  stock['expiration_date'] ??
+                  '')
+              .toString(),
       barcode: (stock['barcode'] ?? '').toString(),
-      oyudentStock: _asInt(stock['quantity']),
-      centechStock: _asInt(stock['quantity']),
+      oyudentStock: quantity,
+      centechStock: quantity,
       categoryCode: categoryCode,
       categoryName: categoryName,
       imageUrl: _productImageUrl(
@@ -225,14 +239,50 @@ String _formatInvoiceDate(DateTime date) {
   return '${date.year}-${two(date.month)}-${two(date.day)} ${two(date.hour)}:${two(date.minute)}';
 }
 
+Object? _orderInvoiceId(Map<String, dynamic> stock) =>
+    stock['in_invoice_id'] == '00000000-0000-0000-0000-000000000000'
+    ? ''
+    : stock['in_invoice_id'];
+
+bool _hasOrderIds(Map<String, dynamic>? row) =>
+    row != null &&
+    [
+      'product_id',
+      'variant_id',
+      'warehouse_id',
+    ].every((field) => row[field]?.toString().trim().isNotEmpty == true);
+
+class _ProductGroup {
+  _ProductGroup(this.lines);
+  final List<Product> lines;
+  Product get product => lines.first;
+  bool get multiple => lines.length > 1;
+  late final branchQuantity = lines.fold<num>(
+    0,
+    (sum, p) => sum + p.oyudentStock,
+  );
+  late final _search = {for (final p in lines) p: p.searchText};
+  bool matches(String query) =>
+      query.isEmpty || _search.values.any((s) => s.contains(query));
+  List<Product> choices(String query) => query.isEmpty
+      ? lines
+      : lines.where((p) => _search[p]!.contains(query)).toList();
+
+  static List<_ProductGroup> byProduct(List<Product> rows) {
+    final grouped = <Object, List<Product>>{};
+    for (final p in rows) {
+      final id = p.apiStock?['product_id'] ?? p.apiStock?['id'];
+      final key = id == null || id.toString().isEmpty ? p : id.toString();
+      (grouped[key] ??= []).add(p);
+    }
+    return grouped.values.map(_ProductGroup.new).toList();
+  }
+}
+
 String _stockLineKey(Map<String, dynamic> stock) => jsonEncode([
-  for (final field in [
-    'product_id',
-    'variant_id',
-    'warehouse_id',
-    'in_invoice_id',
-  ])
+  for (final field in ['product_id', 'variant_id', 'warehouse_id'])
     stock[field]?.toString(),
-  if (stock['in_invoice_id'] == null)
+  _orderInvoiceId(stock)?.toString() ?? '',
+  if ((_orderInvoiceId(stock)?.toString() ?? '').isEmpty)
     (stock['lot_number'] ?? stock['lot_no'] ?? '').toString(),
 ]);

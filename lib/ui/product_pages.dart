@@ -1,14 +1,14 @@
 part of '../main.dart';
 
 class ProductsPage extends StatefulWidget {
-  final List<Product> products;
+  final List<_ProductGroup> groups;
   final String warehouse;
   final String apiToken;
   final Future<void> Function() onReload;
-  final int Function(Product) stockFor;
+  final num Function(Product) stockFor;
   const ProductsPage({
     super.key,
-    required this.products,
+    required this.groups,
     required this.warehouse,
     required this.stockFor,
     required this.apiToken,
@@ -29,109 +29,130 @@ class _ProductsPageState extends State<ProductsPage> {
     super.dispose();
   }
 
-  List<Product> get filteredProducts => widget.products
-      .where((product) => product.searchText.contains(query.toLowerCase()))
-      .toList();
-
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      _TopBar(
-        title: 'Бараа',
-        subtitle: widget.warehouse,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            OutlinedButton.icon(
-              onPressed: widget.apiToken.isEmpty
-                  ? null
-                  : () async {
-                      final created = await showDialog<bool>(
-                        context: context,
-                        builder: (_) =>
-                            _ProductCreateDialog(apiToken: widget.apiToken),
-                      );
-                      if (created == true) await widget.onReload();
-                    },
-              icon: const Icon(Icons.add, size: 17),
-              label: const Text('Бараа нэмэх'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (_) =>
-                    _ProductBulkImportDialog(apiToken: widget.apiToken),
-              ),
-              icon: const Icon(Icons.upload_file_outlined, size: 17),
-              label: const Text('Бараа импортлох'),
-              style: FilledButton.styleFrom(
-                backgroundColor: green,
-                foregroundColor: deepSpace,
-              ),
-            ),
-          ],
-        ),
-      ),
-      Expanded(
-        child: ListView(
-          padding: const EdgeInsets.all(26),
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Агуулахын бараа',
-                    style: TextStyle(
-                      color: ink,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${filteredProducts.length} бараа',
-                  style: const TextStyle(color: muted, fontSize: 11),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: searchController,
-              onChanged: (value) => setState(() => query = value.trim()),
-              decoration: InputDecoration(
-                hintText: 'Монгол, англи нэр, лавлах дугаар, баркод, үйлдвэрлэгчээр хайх…',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: query.isEmpty
+  Widget build(BuildContext context) {
+    final filtered = widget.groups
+        .where((g) => g.matches(query.toLowerCase()))
+        .toList();
+    return Column(
+      children: [
+        _TopBar(
+          title: 'Бараа',
+          subtitle: widget.warehouse,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              OutlinedButton.icon(
+                onPressed: widget.apiToken.isEmpty
                     ? null
-                    : IconButton(
-                        tooltip: 'Хайлтыг арилгах',
-                        onPressed: () {
-                          searchController.clear();
-                          setState(() => query = '');
-                        },
-                        icon: const Icon(Icons.close),
+                    : () async {
+                        final created = await showDialog<bool>(
+                          context: context,
+                          builder: (_) =>
+                              _ProductCreateDialog(apiToken: widget.apiToken),
+                        );
+                        if (created == true) await widget.onReload();
+                      },
+                icon: const Icon(Icons.add, size: 17),
+                label: const Text('Бараа нэмэх'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) =>
+                      _ProductBulkImportDialog(apiToken: widget.apiToken),
+                ),
+                icon: const Icon(Icons.upload_file_outlined, size: 17),
+                label: const Text('Бараа импортлох'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: green,
+                  foregroundColor: deepSpace,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: CustomScrollView(
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(26, 26, 26, 0),
+                sliver: SliverList.list(
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Агуулахын бараа',
+                            style: TextStyle(
+                              color: ink,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${filtered.length} бараа',
+                          style: const TextStyle(color: muted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: searchController,
+                      onChanged: (value) =>
+                          setState(() => query = value.trim()),
+                      decoration: InputDecoration(
+                        hintText: 'Монгол, англи нэр, лавлах дугаар, баркод, үйлдвэрлэгчээр хайх…',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: query.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Хайлтыг арилгах',
+                                onPressed: () {
+                                  searchController.clear();
+                                  setState(() => query = '');
+                                },
+                                icon: const Icon(Icons.close),
+                              ),
                       ),
+                    ),
+                    const SizedBox(height: 12),
+                    const _InventoryHeader(),
+                    const Divider(height: 1),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: panelColor,
-                border: Border.all(color: lineColor),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                children: [
-                  const _InventoryHeader(),
-                  const Divider(height: 1),
-                  ...filteredProducts.map(
-                    (product) => Row(
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 26),
+                sliver: SliverList.builder(
+                  itemCount: filtered.length,
+                  itemBuilder: (_, index) {
+                    final group = filtered[index];
+                    final product = group.product;
+                    return Row(
                       children: [
                         Expanded(
-                          child: _InventoryRow(
-                            product: product,
-                            quantity: widget.stockFor(product),
+                          child: InkWell(
+                            onTap: group.multiple
+                                ? () => showDialog<Product>(
+                                    context: context,
+                                    builder: (_) => _StockOptions(
+                                      group: group,
+                                      query: query,
+                                      stockFor: widget.stockFor,
+                                      selectable: false,
+                                    ),
+                                  )
+                                : null,
+                            child: _InventoryRow(
+                              product: product,
+                              options: group.lines.length,
+                              quantity: product.apiStock == null
+                                  ? widget.stockFor(product)
+                                  : group.branchQuantity,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -156,25 +177,29 @@ class _ProductsPageState extends State<ProductsPage> {
                                 },
                         ),
                       ],
+                    );
+                  },
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Center(
+                    child: Text(
+                      query.isEmpty
+                          ? 'Монгол, англи нэр, лавлах дугаар, баркод эсвэл үйлдвэрлэгчээр хайна уу'
+                          : '«$query» хайлтаар ${filtered.length} бараа олдлоо',
+                      style: TextStyle(color: muted, fontSize: 11),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: Text(
-                query.isEmpty
-                    ? 'Монгол, англи нэр, лавлах дугаар, баркод эсвэл үйлдвэрлэгчээр хайна уу'
-                    : '«$query» хайлтаар ${filteredProducts.length} бараа олдлоо',
-                style: TextStyle(color: muted, fontSize: 11),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _ProductCreateDialog extends StatefulWidget {
