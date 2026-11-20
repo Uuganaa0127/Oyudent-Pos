@@ -147,8 +147,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                   )
                                 : null,
                             child: _InventoryRow(
-                              product: product,
-                              options: group.lines.length,
+                              group: group,
                               quantity: product.apiStock == null
                                   ? widget.stockFor(product)
                                   : group.branchQuantity,

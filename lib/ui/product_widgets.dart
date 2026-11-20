@@ -54,7 +54,7 @@ class _ProductCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               group.multiple
-                  ? '${group.lines.length} сонголт · Хувилбар, агуулах'
+                  ? group.optionsLabel
                   : [
                       product.reference,
                       product.lotNumber,
@@ -77,7 +77,16 @@ class _ProductCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    group.multiple ? product.categoryName : product.detail,
+                    group.multiple
+                        ? [
+                                product.apiStock?['code'],
+                                product.apiStock?['supplier_name'],
+                                product.categoryName,
+                              ]
+                              .whereType<String>()
+                              .where((s) => s.trim().isNotEmpty)
+                              .join(' · ')
+                        : product.detail,
                     style: const TextStyle(color: muted, fontSize: 9),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -146,6 +155,10 @@ class _StockOptionsState extends State<_StockOptions> {
       ...matches.where((p) => widget.stockFor(p) > 0),
       ...matches.where((p) => widget.stockFor(p) <= 0),
     ];
+    final variants = _ProductGroup.groupRows(
+      options,
+      _ProductGroup.variantKey,
+    ).values.toList();
     return AlertDialog(
       title: Text(widget.group.product.name),
       content: SizedBox(
@@ -165,20 +178,10 @@ class _StockOptionsState extends State<_StockOptions> {
               child: options.isEmpty
                   ? const Center(child: Text('Тохирох сонголт олдсонгүй.'))
                   : ListView.separated(
-                      itemCount: options.length,
+                      itemCount: variants.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (_, i) {
-                        final p = options[i];
-                        return ListTile(
-                          title: Text(_optionDescription(p)),
-                          subtitle: Text(
-                            'Үлдэгдэл: ${_stockText(widget.stockFor(p))} · ₮${_money(p.price.toDouble())}',
-                          ),
-                          onTap: widget.selectable
-                              ? () => Navigator.pop(context, p)
-                              : null,
-                        );
-                      },
+                      itemBuilder: (_, i) =>
+                          variantTile(variants[i], variants.length == 1),
                     ),
             ),
           ],
@@ -189,6 +192,98 @@ class _StockOptionsState extends State<_StockOptions> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Хаах'),
         ),
+      ],
+    );
+  }
+
+  String stockLabel(Iterable<Product> lines) =>
+      'Үлдэгдэл: ${_stockText(lines.fold<num>(0, (s, p) => s + widget.stockFor(p)))}';
+
+  String warehouseLabel(Product p) {
+    final row = p.apiStock;
+    final name = row?['warehouse_name'] ?? row?['warehouse_id'] ?? 'Агуулах';
+    return [
+      row?['scope'] ?? row?['branch_name'],
+      name,
+    ].whereType<String>().where((s) => s.isNotEmpty).join(' · ');
+  }
+
+  Widget stockTile(
+    Product p,
+    String title, {
+    bool showWarehouse = false,
+    bool showReceipt = false,
+  }) {
+    final row = p.apiStock;
+    final lot = row?['lot_number'] ?? row?['lot_no'];
+    final receipt =
+        row?['invoice_number'] ?? (row == null ? null : _orderInvoiceId(row));
+    final detail = [
+      if (showWarehouse) warehouseLabel(p),
+      if (lot != null && lot.toString().isNotEmpty) 'Лот: $lot',
+      if (row?['expiration_date'] != null)
+        'Дуусах: ${_displayApiDate(row?['expiration_date'])}',
+      if (showReceipt && receipt != null && receipt.toString().isNotEmpty)
+        'Баримт: $receipt',
+      '${stockLabel([p])} · ₮${_money(p.price.toDouble())}',
+    ].join(' · ');
+    return ListTile(
+      title: Text(title),
+      subtitle: Text(detail),
+      onTap: widget.selectable ? () => Navigator.pop(context, p) : null,
+    );
+  }
+
+  Widget variantTile(List<Product> lines, bool onlyVariant) {
+    final p = lines.first;
+    final row = p.apiStock;
+    final title =
+        [
+              row?['color_name'],
+              row?['size_name'],
+              row?['weight'],
+              row?['unit_name'],
+              p.reference,
+              p.barcode,
+            ]
+            .where((s) => s != null && s.toString().trim().isNotEmpty)
+            .toSet()
+            .join(' · ');
+    final label = title.isEmpty ? p.name : title;
+    if (lines.length == 1) return stockTile(p, label, showWarehouse: true);
+    final locations = _ProductGroup.groupRows(
+      lines,
+      _ProductGroup.warehouseKey,
+    );
+    return ExpansionTile(
+      key: PageStorageKey(_ProductGroup.variantKey(p)),
+      initiallyExpanded: onlyVariant,
+      title: Text(label),
+      subtitle: Text('${locations.length} агуулах · ${stockLabel(lines)}'),
+      childrenPadding: const EdgeInsets.only(left: 16),
+      children: [
+        for (final entry in locations.entries)
+          if (entry.value.length == 1)
+            stockTile(entry.value.single, warehouseLabel(entry.value.single))
+          else
+            ExpansionTile(
+              key: PageStorageKey((_ProductGroup.variantKey(p), entry.key)),
+              title: Text(warehouseLabel(entry.value.first)),
+              subtitle: Text(
+                '${entry.value.length} үлдэгдлийн мөр · ${stockLabel(entry.value)}',
+              ),
+              childrenPadding: const EdgeInsets.only(left: 12),
+              children: [
+                for (final line in entry.value)
+                  stockTile(
+                    line,
+                    _orderInvoiceId(line.apiStock!) == ''
+                        ? 'Орлогын баримтгүй'
+                        : 'Орлогын мөр',
+                    showReceipt: true,
+                  ),
+              ],
+            ),
       ],
     );
   }
@@ -428,14 +523,10 @@ class _InventoryHeader extends StatelessWidget {
 }
 
 class _InventoryRow extends StatelessWidget {
-  final Product product;
+  final _ProductGroup group;
+  Product get product => group.product;
   final num quantity;
-  final int options;
-  const _InventoryRow({
-    required this.product,
-    required this.quantity,
-    required this.options,
-  });
+  const _InventoryRow({required this.group, required this.quantity});
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -466,7 +557,7 @@ class _InventoryRow extends StatelessWidget {
               ),
               const SizedBox(height: 3),
               Text(
-                options > 1 ? product.categoryName : product.detail,
+                group.multiple ? product.categoryName : product.detail,
                 style: const TextStyle(color: muted, fontSize: 9),
               ),
             ],
@@ -475,7 +566,7 @@ class _InventoryRow extends StatelessWidget {
         Expanded(
           flex: 2,
           child: Text(
-            options > 1
+            group.multiple
                 ? (product.apiStock?['code'] ?? '').toString()
                 : product.reference,
             style: const TextStyle(color: muted, fontSize: 10),
@@ -484,7 +575,7 @@ class _InventoryRow extends StatelessWidget {
         Expanded(
           flex: 2,
           child: Text(
-            options > 1 ? '$options сонголт' : product.lotNumber,
+            group.multiple ? group.optionsLabel : product.lotNumber,
             style: const TextStyle(color: muted, fontSize: 10),
           ),
         ),

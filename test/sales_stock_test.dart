@@ -39,6 +39,16 @@ void main() {
           'in_invoice_id': '00000000-0000-0000-0000-000000000000',
         },
       ];
+      for (final lot in ['A', 'B']) {
+        stock.add({
+          ...stock.first,
+          'warehouse_id': 'w-annex',
+          'warehouse_name': 'Annex',
+          'lot_number': lot,
+          'quantity': 1,
+          'in_invoice_id': 'receipt-$lot',
+        });
+      }
       Future<http.Response> respond(http.Request r) async {
         final path = r.url.path.replaceFirst('/admin/api/v1', '');
         if (r.method == 'POST' && path == '/order/') {
@@ -71,7 +81,8 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('2 бараа'), findsOneWidget);
         expect(find.text('Ceramic Disc'), findsNWidgets(2));
-        expect(find.text('Үлдэгдэл: 1'), findsOneWidget);
+        expect(find.text('Үлдэгдэл: 3'), findsOneWidget);
+        expect(find.text('12 хувилбар · 13 агуулах'), findsOneWidget);
         await tester.tap(find.text('Ceramic Disc').first);
         await tester.pumpAndSettle();
         final dialog = find.byType(AlertDialog);
@@ -80,14 +91,29 @@ void main() {
           'SCAN-0-REF',
         );
         await tester.pumpAndSettle();
-        await tester.tap(
-          find.descendant(of: dialog, matching: find.byType(ListTile)),
+        expect(
+          find.widgetWithText(ExpansionTile, 'SCAN-0-REF'),
+          findsOneWidget,
         );
+        if (find.text('Warehouse 0').evaluate().isEmpty) {
+          await tester.tap(find.widgetWithText(ListTile, 'SCAN-0-REF'));
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text('Warehouse 0'));
         await tester.pumpAndSettle();
         await tester.tap(find.byIcon(Icons.add_circle_outline));
         await tester.pumpAndSettle();
 
         final search = find.widgetWithText(TextField, 'Бараа хайх…');
+        await tester.enterText(search, 'SCAN-0-REF');
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Ceramic Disc').first);
+        await tester.pumpAndSettle();
+        expect(find.text('Annex'), findsOneWidget);
+        await tester.tap(find.text('Annex'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.textContaining('Лот: B ·'));
+        await tester.pumpAndSettle();
         await tester.enterText(search, 'SCAN-1-REF');
         await tester.pumpAndSettle();
         expect(find.text('1 бараа'), findsOneWidget);
@@ -98,7 +124,10 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
         expect(posted, hasLength(1));
         final items = posted.single['items'] as List;
-        expect(items, hasLength(2));
+        expect(items, hasLength(3));
+        expect(items[1], containsPair('variantId', 'variant-0'));
+        expect(items[1], containsPair('warehouseId', 'w-annex'));
+        expect(items[1], containsPair('inInvoiceId', 'receipt-B'));
         expect(items.first, containsPair('productId', 'p'));
         expect(items.first, containsPair('variantId', 'variant-0'));
         expect(items.first, containsPair('warehouseId', 'w-0'));
@@ -138,16 +167,19 @@ void main() {
           '/order/list' => [order],
           '/order/detail/old' => order,
           '/order/get-available-stocks' => [
-            {
-              'product_id': 'p',
-              'variant_id': 'v',
-              'warehouse_id': 'w',
-              'branch_id': 'b',
-              'product_name': 'Replacement',
-              'quantity': 0,
-              'unit_price': 25,
-              'in_invoice_id': '00000000-0000-0000-0000-000000000000',
-            },
+            for (final location in ['w', 'other'])
+              {
+                'product_id': 'p',
+                'variant_id': 'v',
+                'warehouse_id': location,
+                'warehouse_name': 'Warehouse $location',
+                'barcode': 'RETURN-BARCODE',
+                'branch_id': 'b',
+                'product_name': 'Replacement',
+                'quantity': 0,
+                'unit_price': 25,
+                'in_invoice_id': '00000000-0000-0000-0000-000000000000',
+              },
           ],
           _ => throw StateError(path),
         };
@@ -167,7 +199,13 @@ void main() {
         await tester.tap(find.text('Бараа нэмэх'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Replacement'), findsOneWidget);
+        expect(find.text('1 хувилбар · 2 агуулах'), findsOneWidget);
         await tester.tap(find.text('Replacement'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('RETURN-BARCODE'), findsOneWidget);
+        await tester.tap(find.text('Warehouse w'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 400));
         final qty = find.widgetWithText(TextFormField, 'Тоо хэмжээ');

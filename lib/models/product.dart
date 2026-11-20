@@ -34,6 +34,9 @@ class Product {
       source['supplier_code'],
       source['partner_name'],
       source['barcode'],
+      source['scope'],
+      source['warehouse_name'],
+      source['invoice_number'],
       source['lot_no'],
       source['note'],
       source['expiration_date'],
@@ -268,14 +271,37 @@ class _ProductGroup {
       ? lines
       : lines.where((p) => _search[p]!.contains(query)).toList();
 
-  static List<_ProductGroup> byProduct(List<Product> rows) {
+  static Object variantKey(Product p) {
+    final id = p.apiStock?['variant_id']?.toString();
+    return id == null || id.isEmpty ? p : id;
+  }
+
+  static Object warehouseKey(Product p) {
+    final row = p.apiStock;
+    final id = row?['warehouse_id'] ?? row?['warehouse_name'];
+    return id == null
+        ? p
+        : ((row?['branch_id'] ?? row?['scope'])?.toString(), id.toString());
+  }
+
+  late final String optionsLabel =
+      '${lines.map(variantKey).toSet().length} хувилбар · ${lines.map(warehouseKey).toSet().length} агуулах';
+
+  static List<_ProductGroup> byProduct(Iterable<Product> rows) =>
+      groupRows(rows, (p) {
+        final id = p.apiStock?['product_id'] ?? p.apiStock?['id'];
+        return id == null || id.toString().isEmpty ? p : id.toString();
+      }).values.map(_ProductGroup.new).toList();
+
+  static Map<Object, List<Product>> groupRows(
+    Iterable<Product> rows,
+    Object Function(Product) key,
+  ) {
     final grouped = <Object, List<Product>>{};
-    for (final p in rows) {
-      final id = p.apiStock?['product_id'] ?? p.apiStock?['id'];
-      final key = id == null || id.toString().isEmpty ? p : id.toString();
-      (grouped[key] ??= []).add(p);
+    for (final row in rows) {
+      (grouped[key(row)] ??= []).add(row);
     }
-    return grouped.values.map(_ProductGroup.new).toList();
+    return grouped;
   }
 }
 

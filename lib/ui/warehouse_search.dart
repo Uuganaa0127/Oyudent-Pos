@@ -25,7 +25,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
   String scope = 'Хоёулаа';
   bool loading = true;
   String? error;
-  List<Map<String, dynamic>> stocks = [];
+  List<Product> stocks = [];
   String norm(dynamic v) => (v ?? '')
       .toString()
       .toLowerCase()
@@ -36,7 +36,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
   void initState() {
     super.initState();
     if (widget.cachedStocks != null) {
-      stocks = widget.cachedStocks!;
+      stocks = widget.cachedStocks!.map(Product.fromApi).toList();
       loading = false;
     } else {
       load();
@@ -88,8 +88,9 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
             }),
       );
       if (mounted) {
-        setState(() => stocks = groups.expand((g) => g).toList());
-        widget.onLoaded?.call(stocks);
+        final rows = groups.expand((g) => g).toList();
+        setState(() => stocks = rows.map(Product.fromApi).toList());
+        widget.onLoaded?.call(rows);
       }
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
@@ -104,8 +105,9 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
         .split(RegExp(r'[^a-zа-яёөү0-9]+'))
         .where((x) => x.isNotEmpty)
         .toSet();
-    final matches = <({int score, Map<String, dynamic> row})>[];
-    for (final row in stocks) {
+    final matches = <({int score, Product product})>[];
+    for (final product in stocks) {
+      final row = product.apiStock!;
       if (scope != 'Хоёулаа' && scope != row['scope']) continue;
       final brand = norm(row['supplier_name']).trim();
       final preferred =
@@ -125,6 +127,7 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
           row['lot_number'],
           row['lot_no'],
           row['barcode'],
+          row['warehouse_name'],
           brand,
         ].join(' '),
       );
@@ -138,10 +141,11 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
             (query.trim().isNotEmpty && text.contains(norm(query).trim())
                 ? 5
                 : 0),
-        row: row,
+        product: product,
       ));
     }
-    matches.sort((a, b) => b.score.compareTo(a.score));
+    if (words.isNotEmpty) matches.sort((a, b) => b.score.compareTo(a.score));
+    final groups = _ProductGroup.byProduct(matches.map((m) => m.product));
     return Dialog(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 720, maxHeight: 650),
@@ -216,34 +220,41 @@ class _WarehouseSearchState extends State<_WarehouseSearch> {
                         ),
                       )
                     : ListView.builder(
-                        itemCount: matches.length,
+                        itemCount: groups.length,
                         itemBuilder: (_, i) {
-                          final r = matches[i].row;
+                          final group = groups[i];
+                          final p = group.product;
                           return ListTile(
-                            title: Text(
-                              [
-                                r['product_name'],
-                                r['product_mn_name'],
-                              ].whereType<String>().join(' · '),
-                            ),
+                            title: Text(p.name),
                             subtitle: Text(
-                              [
-                                    r['supplier_name'],
-                                    r['size_name'],
-                                    r['color_name'],
-                                    r['barcode'],
-                                    r['lot_number'] ?? r['lot_no'],
-                                    r['expiration_date'],
-                                    r['scope'],
-                                    r['warehouse_name'],
-                                  ]
-                                  .whereType<String>()
-                                  .where((v) => v.isNotEmpty)
-                                  .join(' · '),
+                              group.multiple
+                                  ? group.optionsLabel
+                                  : [
+                                      p.apiStock?['scope'],
+                                      _optionDescription(p),
+                                    ].whereType<String>().join(' · '),
                             ),
-                            trailing: Text('Үлдэгдэл: ${r['quantity']}'),
-                            onTap: widget.selectable
-                                ? () => Navigator.pop(context, r)
+                            trailing: Text(
+                              'Үлдэгдэл: ${_stockText(group.branchQuantity)}',
+                            ),
+                            onTap: group.multiple || widget.selectable
+                                ? () async {
+                                    final choice = group.multiple
+                                        ? await showDialog<Product>(
+                                            context: context,
+                                            builder: (_) => _StockOptions(
+                                              group: group,
+                                              query: '',
+                                              stockFor: (p) => p.oyudentStock,
+                                              selectable: widget.selectable,
+                                            ),
+                                          )
+                                        : p;
+                                    if (mounted &&
+                                        widget.selectable &&
+                                        choice != null)
+                                      Navigator.pop(context, choice.apiStock);
+                                  }
                                 : null,
                           );
                         },
